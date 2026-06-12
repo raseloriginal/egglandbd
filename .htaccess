@@ -35,6 +35,11 @@ ServerSignature Off
 # ── Block database folder ──
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  
+  # Fix hardcoded /egglandbd/ paths on live server
+  RewriteCond %{HTTP_HOST} ^eggland\.raseloriginal\.digital$ [NC]
+  RewriteRule ^egglandbd/(.*)$ $1 [L,QSA]
+
   RewriteRule ^database/ - [F,L]
 </IfModule>
 
