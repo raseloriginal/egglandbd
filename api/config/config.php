@@ -5,14 +5,14 @@
 
 define('APP_NAME', 'Eggland BD');
 define('APP_VERSION', '1.0.0');
-$is_localhost = isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1', '::1']);
+$is_localhost = isset($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
 
 if ($is_localhost) {
     define('APP_URL', 'http://localhost/egglandbd');
     define('API_URL', 'http://localhost/egglandbd/api');
 
     // Database Local
-    define('DB_HOST', 'localhost');
+    define('DB_HOST', '127.0.0.1');
     define('DB_NAME', 'egglandbd');
     define('DB_USER', 'root');
     define('DB_PASS', '');
