@@ -5,14 +5,33 @@
 
 define('APP_NAME', 'Eggland BD');
 define('APP_VERSION', '1.0.0');
-define('APP_URL', 'http://localhost/egglandbd');
-define('API_URL', 'http://localhost/egglandbd/api');
+$is_localhost = isset($_SERVER['HTTP_HOST']) && in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1', '::1']);
 
-// Database
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'egglandbd');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+if ($is_localhost) {
+    define('APP_URL', 'http://localhost/egglandbd');
+    define('API_URL', 'http://localhost/egglandbd/api');
+
+    // Database Local
+    define('DB_HOST', 'localhost');
+    define('DB_NAME', 'egglandbd');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+    
+    // Environment Local
+    define('DEBUG_MODE', true);
+} else {
+    define('APP_URL', 'https://eggland.raseloriginal.digital');
+    define('API_URL', 'https://eggland.raseloriginal.digital/api');
+
+    // Database Live
+    define('DB_HOST', 'localhost');
+    define('DB_NAME', 'rasedwwq_eggland');
+    define('DB_USER', 'rasedwwq_eggland');
+    define('DB_PASS', '4EewG;RPf]ze_GnV');
+    
+    // Environment Live
+    define('DEBUG_MODE', false);
+}
 define('DB_CHARSET', 'utf8mb4');
 
 // JWT
@@ -44,5 +63,5 @@ define('LOW_STOCK_THRESHOLD', 100);
 define('LOGIN_MAX_ATTEMPTS', 5);
 define('LOGIN_LOCKOUT_MINUTES', 15);
 
-// Environment
-define('DEBUG_MODE', true); // Set false in production
+// Environment (Defined dynamically above)
+// define('DEBUG_MODE', true); // Set false in production
