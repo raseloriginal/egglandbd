@@ -175,7 +175,7 @@ const EggMap = {
     this.map.on('click', e => {
       const { lat, lng } = e.latlng;
       if (tempMarker) this.map.removeLayer(tempMarker);
-      const icon = this.createMarker(lat, lng, 'maroon', 'New');
+      const icon = EggMap.createMarker(lat, lng, 'maroon', 'New');
       tempMarker = L.marker([lat, lng], { icon }).addTo(this.map);
       if (onPinSelected) onPinSelected(lat, lng);
     });

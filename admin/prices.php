@@ -38,9 +38,7 @@ ob_start();
       <span class="card-title">Egg Price History</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap">
-      <select id="chartProduct" class="form-control" style="width:200px;padding:6px 10px">
-        <option value="">All Products (Average)</option>
-      </select>
+
       <div style="display:flex;gap:6px">
         <button class="btn btn-sm btn-ghost active" id="btn7" onclick="setChartDays(7,this)">7D</button>
         <button class="btn btn-sm btn-ghost" id="btn30" onclick="setChartDays(30,this)">30D</button>
@@ -53,7 +51,9 @@ ob_start();
       <i class="fas fa-chart-line" style="font-size:36px;display:block;margin-bottom:10px;opacity:0.3"></i>
       No price change history yet. Update some prices to see the chart.
     </div>
-    <canvas id="priceChart" style="max-height:280px"></canvas>
+    <div style="height:400px">
+      <canvas id="priceChart"></canvas>
+    </div>
   </div>
 </div>
 
@@ -108,12 +108,7 @@ async function loadPriceProducts() {
 
   allProducts = resp.data;
 
-  // Populate chart product selector
-  const sel = document.getElementById('chartProduct');
-  sel.innerHTML = '<option value="">All Products (Average)</option>'
-    + allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
-  sel.onchange = () => loadChart();
 
   renderCards(allProducts);
   document.getElementById('productCount').textContent = `${allProducts.length} products`;
@@ -328,10 +323,7 @@ function filterCards() {
 
 // ── Chart ─────────────────────────────────────────────────
 async function loadChart() {
-  const productId = document.getElementById('chartProduct').value;
-  const params    = { history: 1, days: chartDays };
-  if (productId) params.product_id = productId;
-
+  const params = { history: 1, days: chartDays };
   const resp = await App.get('admin/prices.php', params);
   if (!resp?.success) return;
 
@@ -348,50 +340,58 @@ async function loadChart() {
   canvas.style.display = 'block';
   emptyEl.style.display = 'none';
 
-  const labels  = rows.map(r => r.date);
-  const buyData = rows.map(r => parseFloat(r.buying_price));
-  const sellData = rows.map(r => parseFloat(r.selling_price));
+  // Extract unique dates and sort them
+  const uniqueDates = [...new Set(rows.map(r => r.date))].sort();
+
+  // Group data by product
+  const products = {};
+  rows.forEach(r => {
+    if (!products[r.product_id]) {
+      products[r.product_id] = { name: r.product_name, dataByDate: {} };
+    }
+    products[r.product_id].dataByDate[r.date] = parseFloat(r.selling_price);
+  });
+
+  const colors = ['#8B002D', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e', '#6366f1', '#06b6d4'];
+  
+  const datasets = Object.values(products).map((p, i) => {
+    const color = colors[i % colors.length];
+    const data = [];
+    let lastPrice = null; // Start with null, will only plot connected lines if data exists
+
+    uniqueDates.forEach(date => {
+      if (p.dataByDate[date] !== undefined) {
+        lastPrice = p.dataByDate[date];
+      }
+      data.push(lastPrice);
+    });
+
+    return {
+      label: p.name,
+      data: data,
+      backgroundColor: color,
+      borderRadius: 4,
+      barPercentage: 0.8,
+      categoryPercentage: 0.9
+    };
+  });
 
   if (chartInstance) chartInstance.destroy();
 
   chartInstance = new Chart(canvas.getContext('2d'), {
-    type: 'line',
+    type: 'bar',
     data: {
-      labels,
-      datasets: [
-        {
-          label: 'Selling Price (৳)',
-          data: sellData,
-          borderColor: '#8B002D',
-          backgroundColor: 'rgba(139,0,45,0.08)',
-          borderWidth: 2.5,
-          pointBackgroundColor: '#8B002D',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.4,
-          fill: true,
-        },
-        {
-          label: 'Buying Price (৳)',
-          data: buyData,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59,130,246,0.06)',
-          borderWidth: 2,
-          pointBackgroundColor: '#3b82f6',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.4,
-          fill: true,
-        }
-      ]
+      labels: uniqueDates,
+      datasets: datasets
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           position: 'top',
-          labels: { usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, weight: '600' } }
+          labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11, weight: '500' } }
         },
         tooltip: {
           callbacks: {

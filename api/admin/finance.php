@@ -98,12 +98,11 @@ if ($method === 'POST') {
     if ($type === 'deposit') {
         requireAdmin();
         $stmt = $db->prepare("
-            INSERT INTO deposits (agent_id, amount, bank_name, account_number, reference, deposited_at, notes, added_by, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            INSERT INTO deposits (agent_id, amount, deposited_at, notes, added_by, status)
+            VALUES (?, ?, ?, ?, ?, 'pending')
         ");
         $stmt->execute([
-            $body['agent_id'], $body['amount'], $body['bank_name'] ?? null,
-            $body['account_number'] ?? null, $body['reference'] ?? null,
+            $body['agent_id'], $body['amount'],
             $body['deposited_at'] ?? date('Y-m-d'), $body['notes'] ?? null, $user['uid']
         ]);
         $id = $db->lastInsertId();

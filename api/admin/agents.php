@@ -62,10 +62,13 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
-    $required = ['name', 'username', 'phone', 'password'];
+    $required = ['name', 'phone', 'password'];
     foreach ($required as $f) {
         if (empty($body[$f])) Response::error("Field '$f' is required.", 422);
     }
+    
+    // Set username as phone number
+    $body['username'] = $body['phone'];
 
     // Check unique username
     $check = $db->prepare("SELECT id FROM users WHERE username = ?");
@@ -78,8 +81,8 @@ if ($method === 'POST') {
         $stmt->execute([$body['name'], $body['username'], $body['email'] ?? null, $body['phone'], password_hash($body['password'], PASSWORD_BCRYPT)]);
         $userId = $db->lastInsertId();
 
-        $stmt2 = $db->prepare("INSERT INTO agents (user_id, area_id, commission_type, commission_rate, credit_limit, joining_date, nid, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt2->execute([$userId, $body['area_id'] ?? null, $body['commission_type'] ?? 'percentage', $body['commission_rate'] ?? 0, $body['credit_limit'] ?? 500000, $body['joining_date'] ?? date('Y-m-d'), $body['nid'] ?? null, $body['address'] ?? null]);
+        $stmt2 = $db->prepare("INSERT INTO agents (user_id, area_id, joining_date, nid, address) VALUES (?, ?, ?, ?, ?)");
+        $stmt2->execute([$userId, $body['area_id'] ?? null, $body['joining_date'] ?? date('Y-m-d'), $body['nid'] ?? null, $body['address'] ?? null]);
         $agentId = $db->lastInsertId();
 
         $db->commit();
@@ -120,7 +123,7 @@ if ($method === 'PUT') {
         // Update agent fields
         $aSets = [];
         $aParams = [];
-        foreach (['area_id', 'commission_type', 'commission_rate', 'credit_limit', 'nid', 'address', 'notes'] as $f) {
+        foreach (['area_id', 'nid', 'address', 'notes'] as $f) {
             if (isset($body[$f])) { $aSets[] = "$f = ?"; $aParams[] = $body[$f]; }
         }
         if ($aSets) {

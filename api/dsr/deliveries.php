@@ -32,7 +32,7 @@ if ($method === 'GET') {
             LEFT JOIN (
                 SELECT o.* FROM orders o
                 JOIN deliveries d ON d.order_id = o.id
-                WHERE d.status = 'assigned'" . ($dsrIdParam ? " AND d.dsr_id = ?" : "") . "
+                WHERE d.status IN ('assigned', 'in_transit')" . ($dsrIdParam ? " AND d.dsr_id = ?" : "") . "
             ) o ON o.retailer_id = r.id
             LEFT JOIN deliveries d ON d.order_id = o.id" . ($dsrIdParam ? " AND d.dsr_id = ?" : "") . "
             WHERE 1=1" . ($agentId ? " AND r.agent_id = ?" : "") . " AND r.lat IS NOT NULL AND r.lng IS NOT NULL

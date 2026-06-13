@@ -19,49 +19,33 @@ $method = $_SERVER['REQUEST_METHOD'];
 // ── GET ────────────────────────────────────────────────────
 if ($method === 'GET') {
 
-    // Price chart history – last 30 days, grouped by date
+    // Price chart history – last X days, grouped by date and product
     if (!empty($_GET['history'])) {
-        $productId = (int)($_GET['product_id'] ?? 0);
-        $days      = min(90, (int)($_GET['days'] ?? 30));
+        $days = min(90, (int)($_GET['days'] ?? 30));
 
-        if ($productId) {
-            $stmt = $db->prepare("
-                SELECT DATE(created_at) as date,
-                       new_buying_price  as buying_price,
-                       new_selling_price as selling_price
-                FROM product_price_history
-                WHERE product_id = ?
-                  AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                ORDER BY created_at ASC
-            ");
-            $stmt->execute([$productId, $days]);
-        } else {
-            // Aggregate: average selling price across all products per day
-            $stmt = $db->prepare("
-                SELECT DATE(created_at) as date,
-                       ROUND(AVG(new_buying_price),2)  as buying_price,
-                       ROUND(AVG(new_selling_price),2) as selling_price
-                FROM product_price_history
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                GROUP BY DATE(created_at)
-                ORDER BY date ASC
-            ");
-            $stmt->execute([$days]);
-        }
+        $stmt = $db->prepare("
+            SELECT h.product_id, p.name as product_name, DATE(h.created_at) as date,
+                   ROUND(AVG(h.new_buying_price),2)  as buying_price,
+                   ROUND(AVG(h.new_selling_price),2) as selling_price
+            FROM product_price_history h
+            JOIN products p ON p.id = h.product_id
+            WHERE h.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            GROUP BY h.product_id, p.name, DATE(h.created_at)
+            ORDER BY date ASC
+        ");
+        $stmt->execute([$days]);
         $rows = $stmt->fetchAll();
 
         // Also get current prices as the latest point
-        if ($productId) {
-            $cur = $db->prepare("SELECT buying_price, selling_price, updated_at FROM products WHERE id = ?");
-            $cur->execute([$productId]);
-            $cur = $cur->fetch();
-            if ($cur) {
-                $rows[] = [
-                    'date'          => date('Y-m-d', strtotime($cur['updated_at'])),
-                    'buying_price'  => $cur['buying_price'],
-                    'selling_price' => $cur['selling_price'],
-                ];
-            }
+        $cur = $db->query("SELECT id as product_id, name as product_name, buying_price, selling_price, updated_at FROM products WHERE status = 'active'");
+        foreach ($cur->fetchAll() as $c) {
+            $rows[] = [
+                'product_id' => $c['product_id'],
+                'product_name' => $c['product_name'],
+                'date' => date('Y-m-d', strtotime($c['updated_at'])),
+                'buying_price' => $c['buying_price'],
+                'selling_price' => $c['selling_price'],
+            ];
         }
 
         Response::success($rows);

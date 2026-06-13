@@ -113,10 +113,7 @@ ob_start();
           <label class="form-label">Unit Size (pieces)</label>
           <input type="number" class="form-control" id="pUnitSize" value="1" min="1">
         </div>
-        <div class="form-group">
-          <label class="form-label">SKU</label>
-          <input type="text" class="form-control" id="pSku">
-        </div>
+
         <div class="form-group">
           <label class="form-label">Buying Price (৳) *</label>
           <input type="number" class="form-control" id="pBuyPrice" step="0.01" placeholder="0.00">
@@ -195,7 +192,7 @@ async function loadProducts(page = 1) {
           </div>
           <div>
             <div style="font-weight:700">${p.name}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${p.sku||'No SKU'}</div>
+            <div style="font-size:11px;color:var(--text-muted)">Unit: ${p.unit}</div>
           </div>
         </div>
       </td>
@@ -221,7 +218,7 @@ async function loadProducts(page = 1) {
 function openAddProduct() {
   document.getElementById('productId').value = '';
   document.getElementById('productModalTitle').textContent = 'Add Product';
-  ['pName','pSku','pDesc'].forEach(id => document.getElementById(id).value = '');
+  ['pName','pDesc'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('pUnit').value = 'piece';
   document.getElementById('pUnitSize').value = 1;
   document.getElementById('pBuyPrice').value = '';
@@ -245,7 +242,7 @@ async function editProduct(id) {
   document.getElementById('productId').value = p.id;
   document.getElementById('productModalTitle').textContent = 'Edit Product';
   document.getElementById('pName').value = p.name;
-  document.getElementById('pSku').value = p.sku||'';
+
   document.getElementById('pDesc').value = p.description||'';
   document.getElementById('pUnit').value = p.unit;
   document.getElementById('pUnitSize').value = p.unit_size;
@@ -273,7 +270,7 @@ async function saveProduct() {
   // Build FormData to support file upload
   const formData = new FormData();
   formData.append('name', document.getElementById('pName').value.trim());
-  formData.append('sku', document.getElementById('pSku').value.trim());
+
   formData.append('description', document.getElementById('pDesc').value.trim());
   formData.append('category_id', document.getElementById('pCategory').value || '');
   formData.append('unit', document.getElementById('pUnit').value);

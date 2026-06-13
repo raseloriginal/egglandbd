@@ -51,12 +51,12 @@ ob_start();
     <table class="data-table" id="agentsTable">
       <thead>
         <tr>
-          <th>Agent</th><th>Username</th><th>Phone</th><th>Area</th>
-          <th>Commission</th><th>Credit Limit</th><th>Outstanding</th><th>SRs</th><th>Status</th><th>Actions</th>
+          <th>Agent</th><th>Phone</th><th>Area</th>
+          <th>Outstanding</th><th>SRs</th><th>Status</th><th>Actions</th>
         </tr>
       </thead>
       <tbody id="agentsBody">
-        <tr><td colspan="10" style="text-align:center;padding:40px"><div class="spinner" style="margin:auto"></div></td></tr>
+        <tr><td colspan="7" style="text-align:center;padding:40px"><div class="spinner" style="margin:auto"></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -79,35 +79,16 @@ ob_start();
           <input type="text" class="form-control" id="agName" placeholder="Agent full name">
         </div>
         <div class="form-group">
-          <label class="form-label">Username *</label>
-          <input type="text" class="form-control" id="agUsername" placeholder="Login username">
+          <label class="form-label">Phone *</label>
+          <input type="tel" class="form-control" id="agPhone" placeholder="01XXXXXXXXX">
         </div>
         <div class="form-group">
           <label class="form-label">Email</label>
           <input type="email" class="form-control" id="agEmail">
         </div>
-        <div class="form-group">
-          <label class="form-label">Phone *</label>
-          <input type="tel" class="form-control" id="agPhone" placeholder="01XXXXXXXXX">
-        </div>
         <div class="form-group" id="passwordGroup">
           <label class="form-label">Password *</label>
           <input type="password" class="form-control" id="agPassword" placeholder="Min 6 characters">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Commission Type</label>
-          <select class="form-control" id="agCommType">
-            <option value="percentage">Percentage</option>
-            <option value="fixed">Fixed Amount</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Commission Rate</label>
-          <input type="number" class="form-control" id="agCommRate" step="0.01" value="2.50" placeholder="e.g. 2.50">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Credit Limit (৳)</label>
-          <input type="number" class="form-control" id="agCreditLimit" value="500000">
         </div>
         <div class="form-group">
           <label class="form-label">Joining Date</label>
@@ -148,7 +129,7 @@ async function loadAgents(page = 1) {
   document.getElementById('totalBadge').textContent = resp.pagination.total;
 
   if (!resp.data.length) {
-    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="empty-state-icon">👤</div><div class="empty-state-title">No agents found</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">👤</div><div class="empty-state-title">No agents found</div></div></td></tr>';
     return;
   }
 
@@ -165,11 +146,8 @@ async function loadAgents(page = 1) {
           </div>
         </div>
       </td>
-      <td>${a.username||'-'}</td>
       <td>${a.phone||a.mobile||'-'}</td>
       <td>${a.area_name||'-'}</td>
-      <td>${a.commission_rate}${a.commission_type==='percentage'?'%':' ৳'}</td>
-      <td>${App.formatMoney(a.credit_limit)}</td>
       <td style="color:var(--danger)">${App.formatMoney(a.outstanding_balance)}</td>
       <td>${a.sr_count||0} SRs</td>
       <td>${App.statusBadge(a.status)}</td>
@@ -190,9 +168,7 @@ function openAddAgent() {
   document.getElementById('agentId').value = '';
   document.getElementById('agentModalTitle').textContent = 'Add Agent';
   document.getElementById('passwordGroup').style.display = '';
-  ['agName','agUsername','agEmail','agPhone','agPassword'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('agCommRate').value = '2.50';
-  document.getElementById('agCreditLimit').value = '500000';
+  ['agName','agEmail','agPhone','agPassword'].forEach(id => document.getElementById(id).value = '');
   App.openModal('agentModal');
 }
 
@@ -204,12 +180,8 @@ async function editAgent(id) {
   document.getElementById('agentModalTitle').textContent = 'Edit Agent';
   document.getElementById('passwordGroup').style.display = 'none'; // Don't show password on edit
   document.getElementById('agName').value = a.name;
-  document.getElementById('agUsername').value = a.username||'';
   document.getElementById('agEmail').value = a.email||'';
   document.getElementById('agPhone').value = a.phone||a.mobile||'';
-  document.getElementById('agCommType').value = a.commission_type||'percentage';
-  document.getElementById('agCommRate').value = a.commission_rate;
-  document.getElementById('agCreditLimit').value = a.credit_limit;
   App.openModal('agentModal');
 }
 
@@ -217,12 +189,8 @@ async function saveAgent() {
   const id = document.getElementById('agentId').value;
   const body = {
     name: document.getElementById('agName').value.trim(),
-    username: document.getElementById('agUsername').value.trim(),
     email: document.getElementById('agEmail').value.trim(),
     phone: document.getElementById('agPhone').value.trim(),
-    commission_type: document.getElementById('agCommType').value,
-    commission_rate: parseFloat(document.getElementById('agCommRate').value),
-    credit_limit: parseFloat(document.getElementById('agCreditLimit').value),
     joining_date: document.getElementById('agJoinDate').value,
   };
 
@@ -249,11 +217,8 @@ async function viewAgent(id) {
   document.getElementById('agentDetailBody').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div><div class="form-label">Name</div><div class="fw-bold">${a.name}</div></div>
-      <div><div class="form-label">Username</div><div>${a.username||'-'}</div></div>
       <div><div class="form-label">Phone</div><div>${a.phone||a.mobile||'-'}</div></div>
       <div><div class="form-label">Email</div><div>${a.email||'-'}</div></div>
-      <div><div class="form-label">Commission</div><div>${a.commission_rate}${a.commission_type==='percentage'?'%':' ৳'}</div></div>
-      <div><div class="form-label">Credit Limit</div><div>${App.formatMoney(a.credit_limit)}</div></div>
       <div><div class="form-label">Outstanding</div><div style="color:var(--danger)">${App.formatMoney(a.outstanding_balance||0)}</div></div>
       <div><div class="form-label">Status</div><div>${App.statusBadge(a.status)}</div></div>
     </div>

@@ -10,7 +10,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/audit.php';
 
-$user = requireSR();
+$user = requireAny();
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -29,6 +29,9 @@ if ($method === 'GET') {
     } elseif ($user['role'] === 'agent') {
         $where[] = 'o.agent_id = ?';
         $params[] = $user['agent_id'];
+    } elseif ($user['role'] === 'dsr') {
+        $where[] = 'o.dsr_id = ?';
+        $params[] = $user['dsr_id'];
     }
 
     if (!empty($_GET['status'])) { $where[] = 'o.status = ?'; $params[] = $_GET['status']; }
@@ -73,6 +76,7 @@ if ($method === 'POST') {
 
     $agentId = $user['agent_id'];
     $srId = $user['role'] === 'sr' ? $user['sr_id'] : null;
+    $dsrId = $user['role'] === 'dsr' ? $user['dsr_id'] : null;
 
     $db->beginTransaction();
     try {
@@ -120,10 +124,10 @@ if ($method === 'POST') {
         $orderNumber = 'ORD-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
         $oStmt = $db->prepare("
-            INSERT INTO orders (order_number, retailer_id, agent_id, sr_id, order_type, status, subtotal, discount, grand_total, due_amount)
-            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+            INSERT INTO orders (order_number, retailer_id, agent_id, sr_id, dsr_id, order_type, status, subtotal, discount, grand_total, due_amount)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
         ");
-        $oStmt->execute([$orderNumber, $retailerId, $agentId, $srId, $orderType, $subtotal, $discount, $grandTotal, $grandTotal]);
+        $oStmt->execute([$orderNumber, $retailerId, $agentId, $srId, $dsrId, $orderType, $subtotal, $discount, $grandTotal, $grandTotal]);
         $orderId = $db->lastInsertId();
 
         // Insert items & reserve stock

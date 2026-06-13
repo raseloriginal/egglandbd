@@ -10,11 +10,15 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/audit.php';
 
-$user = requireAdmin();
-$db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
-
 if ($method === 'GET') {
+    $user = requireAny();
+} else {
+    $user = requireAdmin();
+}
+$db = Database::getInstance();
+
+if ($method === 'GET' && !isset($_GET['id'])) {
     $page     = max(1, (int)($_GET['page'] ?? 1));
     $pageSize = min(100, (int)($_GET['page_size'] ?? DEFAULT_PAGE_SIZE));
     $offset   = ($page - 1) * $pageSize;

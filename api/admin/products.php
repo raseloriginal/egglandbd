@@ -9,10 +9,13 @@ require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/audit.php';
-
-$user = requireAgent(); // Admin + Agent can manage products
-$db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'GET') {
+    $user = requireAny();
+} else {
+    $user = requireAgent(); // Admin + Agent can manage products
+}
+$db = Database::getInstance();
 
 if ($method === 'GET') {
     if (isset($_GET['id'])) {

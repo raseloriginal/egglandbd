@@ -81,7 +81,7 @@ async function loadDSRDashboard() {
   if (resp?.success) {
     const deliveries = resp.data;
     const delivered = deliveries.filter(d => d.status === 'delivered').length;
-    const pending = deliveries.filter(d => d.status === 'assigned').length;
+    const pending = deliveries.filter(d => ['assigned', 'in_transit'].includes(d.status)).length;
 
     document.getElementById('dsrDelivered').textContent = delivered;
     document.getElementById('dsrPending').textContent = pending;
@@ -97,7 +97,7 @@ async function loadDSRDashboard() {
           <td>${d.retailer_name}<br><span class="text-sm text-muted">${d.retailer_phone||''}</span></td>
           <td>${App.formatMoney(d.grand_total)}</td>
           <td>${App.statusBadge(d.status)}</td>
-          <td>${d.status==='assigned'?`<a href="/egglandbd/dsr/map.php" class="btn btn-primary btn-sm"><i class="fas fa-truck"></i> Deliver</a>`:'<span class="text-muted">Done</span>'}</td>
+          <td>${['assigned', 'in_transit'].includes(d.status)?`<a href="/egglandbd/dsr/map.php" class="btn btn-primary btn-sm"><i class="fas fa-truck"></i> Deliver</a>`:'<span class="text-muted">Done</span>'}</td>
         </tr>
       `).join('');
     }

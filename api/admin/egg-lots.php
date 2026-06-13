@@ -14,6 +14,17 @@ $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    if (isset($_GET['action']) && $_GET['action'] === 'companies') {
+        $stmt = $db->query("SELECT DISTINCT supplier_name as name, supplier_phone as phone FROM egg_lots WHERE supplier_name IS NOT NULL AND supplier_name != '' ORDER BY supplier_name ASC");
+        Response::success($stmt->fetchAll());
+    }
+    if (isset($_GET['id'])) {
+        $stmt = $db->prepare("SELECT * FROM egg_lots WHERE id = ?");
+        $stmt->execute([(int)$_GET['id']]);
+        $lot = $stmt->fetch();
+        if (!$lot) Response::notFound('Lot not found');
+        Response::success($lot);
+    }
     $page = max(1, (int)($_GET['page'] ?? 1));
     $pageSize = min(100, (int)($_GET['page_size'] ?? DEFAULT_PAGE_SIZE));
     $offset = ($page - 1) * $pageSize;
@@ -87,6 +98,67 @@ if ($method === 'POST') {
     } catch (Exception $e) {
         $db->rollBack();
         Response::error('Failed: ' . $e->getMessage());
+    }
+}
+
+if ($method === 'PUT') {
+    $body = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = (int)($_GET['id'] ?? $body['id'] ?? 0);
+    if (!$id) Response::error('Lot ID required');
+
+    $old = $db->prepare("SELECT * FROM egg_lots WHERE id = ?");
+    $old->execute([$id]);
+    $oldLot = $old->fetch();
+    if (!$oldLot) Response::notFound('Lot not found');
+
+    $required = ['product_id', 'quantity', 'buying_price', 'purchase_date'];
+    foreach ($required as $f) {
+        if (!isset($body[$f]) || $body[$f] === '') Response::error("Field '$f' is required.", 422);
+    }
+
+    $totalCost = $body['quantity'] * $body['buying_price'];
+    $qtyDiff = $body['quantity'] - $oldLot['quantity'];
+
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare("
+            UPDATE egg_lots 
+            SET product_id = ?, supplier_name = ?, supplier_phone = ?, purchase_date = ?, 
+                quantity = ?, buying_price = ?, total_cost = ?, current_balance = current_balance + ?, notes = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $body['product_id'],
+            $body['supplier_name'] ?? null,
+            $body['supplier_phone'] ?? null,
+            $body['purchase_date'],
+            $body['quantity'],
+            $body['buying_price'],
+            $totalCost,
+            $qtyDiff,
+            $body['notes'] ?? null,
+            $id
+        ]);
+
+        if ($qtyDiff != 0 || $body['buying_price'] != $oldLot['buying_price'] || $body['product_id'] != $oldLot['product_id']) {
+            if ($body['product_id'] == $oldLot['product_id']) {
+                $db->prepare("UPDATE products SET current_stock = current_stock + ?, buying_price = ? WHERE id = ?")
+                   ->execute([$qtyDiff, $body['buying_price'], $body['product_id']]);
+            } else {
+                // If product changed, remove old stock and add new stock
+                $db->prepare("UPDATE products SET current_stock = current_stock - ? WHERE id = ?")
+                   ->execute([$oldLot['quantity'], $oldLot['product_id']]);
+                $db->prepare("UPDATE products SET current_stock = current_stock + ?, buying_price = ? WHERE id = ?")
+                   ->execute([$body['quantity'], $body['buying_price'], $body['product_id']]);
+            }
+        }
+
+        $db->commit();
+        AuditLog::log('LOT_UPDATED', 'egg_lots', $user['uid'], 'lot', $id, $oldLot, $body);
+        Response::success(null, 'Lot updated');
+    } catch (Exception $e) {
+        $db->rollBack();
+        Response::error('Failed to update: ' . $e->getMessage());
     }
 }
 

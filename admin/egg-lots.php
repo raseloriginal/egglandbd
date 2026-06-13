@@ -73,21 +73,29 @@ ob_start();
   <div class="modal-box" style="max-width:520px">
     <div class="modal-header">
       <i class="fas fa-box" style="color:var(--maroon)"></i>
-      <div class="modal-title">Record New Purchase Lot</div>
+      <div class="modal-title" id="lotModalTitle">Record New Purchase Lot</div>
       <button class="modal-close" onclick="App.closeModal('lotModal')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="lotId">
       <div class="form-group">
         <label class="form-label">Product *</label>
         <select class="form-control" id="lotProduct"></select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="grid-column: 1 / -1">
+        <label class="form-label">Company Select</label>
+        <select class="form-control" id="lotCompanySelect" onchange="toggleNewCompany()">
+          <option value="">Select a company</option>
+          <option value="NEW_COMPANY" style="font-weight:bold;color:var(--primary)">+ Add New Company</option>
+        </select>
+      </div>
+      <div id="newCompanyFields" style="display:none; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-group">
-          <label class="form-label">Supplier Name</label>
-          <input type="text" class="form-control" id="lotSupplierName" placeholder="Supplier name">
+          <label class="form-label">New Company Name *</label>
+          <input type="text" class="form-control" id="lotSupplierName" placeholder="Company name">
         </div>
         <div class="form-group">
-          <label class="form-label">Supplier Phone</label>
+          <label class="form-label">Company Phone Number</label>
           <input type="tel" class="form-control" id="lotSupplierPhone" placeholder="01XXXXXXXXX">
         </div>
       </div>
@@ -97,12 +105,12 @@ ob_start();
           <input type="date" class="form-control" id="lotDate" value="<?= date('Y-m-d') ?>">
         </div>
         <div class="form-group">
-          <label class="form-label">Quantity (Pieces) *</label>
+          <label class="form-label">Unit Input</label>
           <input type="number" class="form-control" id="lotQty" min="1" placeholder="e.g. 10000">
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Buying Price (৳ per piece) *</label>
+        <label class="form-label">Buying Price per unit (৳)</label>
         <input type="number" class="form-control" id="lotPrice" step="0.01" placeholder="e.g. 9.50">
       </div>
       <div class="form-group">
@@ -122,6 +130,57 @@ $content = ob_get_clean();
 
 $scripts = <<<'JS'
 <script>
+let companiesList = [];
+
+async function loadCompanies() {
+  const resp = await App.get('admin/egg-lots.php?action=companies');
+  if (resp?.success) {
+    companiesList = resp.data;
+  }
+}
+
+function renderCompaniesDropdown(selectedName = '') {
+  const sel = document.getElementById('lotCompanySelect');
+  let html = '<option value="">Select a company</option>';
+  html += '<option value="NEW_COMPANY" style="font-weight:bold;color:var(--primary)">+ Add New Company</option>';
+  companiesList.forEach(c => {
+    html += `<option value="${c.name}">${c.name}</option>`;
+  });
+  sel.innerHTML = html;
+  
+  if (selectedName) {
+    if (companiesList.find(c => c.name === selectedName)) {
+      sel.value = selectedName;
+    } else {
+      sel.value = 'NEW_COMPANY';
+      document.getElementById('lotSupplierName').value = selectedName;
+    }
+  } else {
+    sel.value = '';
+  }
+  toggleNewCompany();
+}
+
+function toggleNewCompany() {
+  const sel = document.getElementById('lotCompanySelect').value;
+  const fields = document.getElementById('newCompanyFields');
+  if (sel === 'NEW_COMPANY') {
+    fields.style.display = 'grid';
+  } else {
+    fields.style.display = 'none';
+    if (sel && sel !== 'NEW_COMPANY') {
+      const c = companiesList.find(x => x.name === sel);
+      if (c) {
+        document.getElementById('lotSupplierName').value = c.name;
+        document.getElementById('lotSupplierPhone').value = c.phone || '';
+      }
+    } else {
+      document.getElementById('lotSupplierName').value = '';
+      document.getElementById('lotSupplierPhone').value = '';
+    }
+  }
+}
+
 async function loadLots(page = 1) {
   const params = {
     page,
@@ -155,7 +214,10 @@ async function loadLots(page = 1) {
       <td><b style="color:var(--maroon)">${App.formatMoney(l.total_cost)}</b></td>
       <td>${App.statusBadge(l.status)}</td>
       <td>
-        ${l.status==='active'?`<button class="btn btn-sm btn-danger" onclick="cancelLot(${l.id}, '${l.lot_number}')" title="Cancel Lot"><i class="fas fa-times"></i> Cancel</button>`:'-'}
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-ghost" onclick="editLot(${l.id})" title="Edit Lot"><i class="fas fa-edit"></i></button>
+          ${l.status==='active'?`<button class="btn btn-sm btn-danger" onclick="cancelLot(${l.id}, '${l.lot_number}')" title="Cancel Lot"><i class="fas fa-times"></i></button>`:'-'}
+        </div>
       </td>
     </tr>
   `).join('');
@@ -164,6 +226,8 @@ async function loadLots(page = 1) {
 }
 
 async function openAddLot() {
+  document.getElementById('lotModalTitle').textContent = 'Record New Purchase Lot';
+  document.getElementById('lotId').value = '';
   // Load products list for dropdown
   const resp = await App.get('admin/products.php', { page_size: 100 });
   const sel = document.getElementById('lotProduct');
@@ -172,6 +236,7 @@ async function openAddLot() {
   }
   
   // Clear modal inputs
+  renderCompaniesDropdown();
   document.getElementById('lotSupplierName').value = '';
   document.getElementById('lotSupplierPhone').value = '';
   document.getElementById('lotQty').value = '';
@@ -181,7 +246,36 @@ async function openAddLot() {
   App.openModal('lotModal');
 }
 
+async function editLot(id) {
+  const resp = await App.get(`admin/egg-lots.php?id=${id}`);
+  if (!resp?.success) return;
+  const l = resp.data;
+  
+  document.getElementById('lotModalTitle').textContent = 'Edit Purchase Lot';
+  document.getElementById('lotId').value = l.id;
+  
+  // Load products list
+  const prodResp = await App.get('admin/products.php', { page_size: 100 });
+  const sel = document.getElementById('lotProduct');
+  if (prodResp?.success) {
+    sel.innerHTML = prodResp.data.map(p => `<option value="${p.id}">${p.name} (${p.unit})</option>`).join('');
+  }
+  
+  document.getElementById('lotProduct').value = l.product_id;
+  document.getElementById('lotSupplierName').value = l.supplier_name || '';
+  document.getElementById('lotSupplierPhone').value = l.supplier_phone || '';
+  renderCompaniesDropdown(l.supplier_name);
+  
+  document.getElementById('lotDate').value = l.purchase_date;
+  document.getElementById('lotQty').value = l.quantity;
+  document.getElementById('lotPrice').value = l.buying_price;
+  document.getElementById('lotNotes').value = l.notes || '';
+  
+  App.openModal('lotModal');
+}
+
 async function saveLot() {
+  const id = document.getElementById('lotId').value;
   const body = {
     product_id: parseInt(document.getElementById('lotProduct').value),
     supplier_name: document.getElementById('lotSupplierName').value.trim(),
@@ -197,9 +291,15 @@ async function saveLot() {
     return;
   }
 
-  const resp = await App.post('admin/egg-lots.php', body);
+  let resp;
+  if (id) {
+    resp = await App.put(`admin/egg-lots.php?id=${id}`, body);
+  } else {
+    resp = await App.post('admin/egg-lots.php', body);
+  }
+  
   if (resp?.success) {
-    App.toast('success', 'Purchase Recorded!', `Lot ${resp.data.lot_number} added`);
+    App.toast('success', id ? 'Lot Updated!' : 'Purchase Recorded!', `Lot saved successfully`);
     App.closeModal('lotModal');
     loadLots();
   } else {
@@ -219,7 +319,7 @@ async function cancelLot(id, lotNum) {
   });
 }
 
-loadLots();
+loadCompanies().then(() => loadLots());
 </script>
 JS;
 

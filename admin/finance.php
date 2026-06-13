@@ -33,14 +33,12 @@ ob_start();
 <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
   <button class="btn btn-primary" id="tab_deposits" onclick="switchTab('deposits')"><i class="fas fa-university"></i> Deposits</button>
   <button class="btn btn-ghost" id="tab_expenses" onclick="switchTab('expenses')"><i class="fas fa-receipt"></i> Expenses</button>
-  <button class="btn btn-ghost" id="tab_collections" onclick="switchTab('collections')"><i class="fas fa-money-bill"></i> Collections</button>
 </div>
 
 <!-- Summary Stats -->
 <div class="stats-grid" style="margin-bottom:24px">
   <div class="stat-card"><div class="stat-label">This Month Deposits</div><div class="stat-value" id="statDeposits"><div class="spinner"></div></div><div class="stat-icon"><i class="fas fa-university"></i></div></div>
   <div class="stat-card"><div class="stat-label">This Month Expenses</div><div class="stat-value" id="statExpenses" style="color:var(--danger)"><div class="spinner"></div></div><div class="stat-icon"><i class="fas fa-receipt"></i></div></div>
-  <div class="stat-card"><div class="stat-label">Cash Collections</div><div class="stat-value" id="statCollections"><div class="spinner"></div></div><div class="stat-icon"><i class="fas fa-money-bill"></i></div></div>
   <div class="stat-card"><div class="stat-label">Net Cash</div><div class="stat-value" id="statNet"><div class="spinner"></div></div><div class="stat-icon"><i class="fas fa-balance-scale"></i></div></div>
 </div>
 
@@ -63,8 +61,8 @@ ob_start();
     <div class="card-header"><i class="fas fa-university" style="color:var(--maroon)"></i><span class="card-title">Deposit Records</span></div>
     <div class="table-wrap">
       <table class="data-table" id="depositsTable">
-        <thead><tr><th>#</th><th>Agent</th><th>Amount</th><th>Bank/Method</th><th>Reference</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="depositsBody"><tr><td colspan="8" style="text-align:center;padding:30px"><div class="spinner" style="margin:auto"></div></td></tr></tbody>
+        <thead><tr><th>#</th><th>Agent</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="depositsBody"><tr><td colspan="6" style="text-align:center;padding:30px"><div class="spinner" style="margin:auto"></div></td></tr></tbody>
       </table>
     </div>
     <div class="pagination" id="depositsPagination"></div>
@@ -91,18 +89,7 @@ ob_start();
   </div>
 </div>
 
-<!-- Collections Section -->
-<div id="section_collections" style="display:none">
-  <div class="card">
-    <div class="card-header"><i class="fas fa-money-bill" style="color:var(--success)"></i><span class="card-title">Cash Collections</span></div>
-    <div class="table-wrap">
-      <table class="data-table" id="collectionsTable">
-        <thead><tr><th>#</th><th>Retailer</th><th>Agent</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
-        <tbody id="collectionsBody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Click "Collections" tab first</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
+
 
 <!-- Add Deposit Modal -->
 <div class="modal-overlay" id="depositModal">
@@ -121,20 +108,7 @@ ob_start();
         <label class="form-label">Amount (৳) *</label>
         <input type="number" class="form-control" id="depAmount" step="0.01" placeholder="0.00">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label class="form-label">Bank</label>
-          <input type="text" class="form-control" id="depBank" placeholder="e.g. Dutch Bangla">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Account No</label>
-          <input type="text" class="form-control" id="depAccount">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Reference / Transaction ID</label>
-        <input type="text" class="form-control" id="depRef">
-      </div>
+
       <div class="form-group">
         <label class="form-label">Date *</label>
         <input type="date" class="form-control" id="depDate" value="<?= date('Y-m-d') ?>">
@@ -199,14 +173,13 @@ let currentTab = 'deposits';
 
 function switchTab(tab) {
   currentTab = tab;
-  ['deposits','expenses','collections'].forEach(t => {
+  ['deposits','expenses'].forEach(t => {
     document.getElementById('section_' + t).style.display = t === tab ? '' : 'none';
     document.getElementById('tab_' + t).className = t === tab ? 'btn btn-primary' : 'btn btn-ghost';
   });
 
   if (tab === 'deposits') loadDeposits();
   else if (tab === 'expenses') loadExpenses();
-  else loadCollections();
 }
 
 async function loadStats() {
@@ -218,7 +191,6 @@ async function loadStats() {
   const d = resp.data;
   document.getElementById('statDeposits').textContent = App.formatMoney(d.deposits);
   document.getElementById('statExpenses').textContent = App.formatMoney(d.expenses);
-  document.getElementById('statCollections').textContent = App.formatMoney(d.collections);
   document.getElementById('statNet').textContent = App.formatMoney(d.net_cash);
 }
 
@@ -231,13 +203,13 @@ async function loadDeposits(page = 1) {
   };
 
   const tbody = document.getElementById('depositsBody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px"><div class="spinner" style="margin:auto"></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px"><div class="spinner" style="margin:auto"></div></td></tr>';
 
   const resp = await App.get('admin/finance.php', { ...params, type: 'deposits' });
-  if (!resp?.success) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">No deposits found</td></tr>'; return; }
+  if (!resp?.success) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">No deposits found</td></tr>'; return; }
 
   if (!resp.data.length) {
-    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🏦</div><div class="empty-state-title">No deposits recorded</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🏦</div><div class="empty-state-title">No deposits recorded</div></div></td></tr>';
     return;
   }
 
@@ -246,8 +218,6 @@ async function loadDeposits(page = 1) {
       <td>${(page-1)*20+i+1}</td>
       <td>${d.agent_name}</td>
       <td><b style="color:var(--maroon)">${App.formatMoney(d.amount)}</b></td>
-      <td>${d.bank_name||'-'}</td>
-      <td>${d.reference||'-'}</td>
       <td>${App.formatDate(d.deposited_at)}</td>
       <td>${App.statusBadge(d.status)}</td>
       <td>
@@ -273,20 +243,7 @@ async function loadExpenses() {
   `).join('');
 }
 
-async function loadCollections() {
-  const resp = await App.get('admin/finance.php', { type: 'collections', page_size: 50 });
-  const tbody = document.getElementById('collectionsBody');
-  if (!resp?.success || !resp.data.length) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">💵</div><div class="empty-state-title">No collections recorded</div></div></td></tr>';
-    return;
-  }
-  tbody.innerHTML = resp.data.map((c, i) => `
-    <tr><td>${i+1}</td><td>${c.retailer_name}</td><td>${c.agent_name}</td>
-    <td style="color:var(--success)">${App.formatMoney(c.amount)}</td>
-    <td><span class="badge badge-${c.payment_method}">${c.payment_method}</span></td>
-    <td>${App.formatDate(c.collected_at)}</td></tr>
-  `).join('');
-}
+
 
 async function openAddDeposit() {
   // Load agents
@@ -300,9 +257,6 @@ async function saveDeposit() {
   const body = {
     agent_id: document.getElementById('depAgent').value,
     amount: parseFloat(document.getElementById('depAmount').value),
-    bank_name: document.getElementById('depBank').value,
-    account_number: document.getElementById('depAccount').value,
-    reference: document.getElementById('depRef').value,
     deposited_at: document.getElementById('depDate').value,
     notes: document.getElementById('depNotes').value,
   };

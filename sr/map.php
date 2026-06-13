@@ -201,7 +201,7 @@ async function initSRMap() {
 
   // Init pin map for add retailer
   pinMap = L.map('pinMap', { center: [23.8103, 90.4125], zoom: 12 });
-  L.tileLayer('https://mt{s}.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+  L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
     subdomains: ['0','1','2','3'], maxZoom: 21
   }).addTo(pinMap);
 

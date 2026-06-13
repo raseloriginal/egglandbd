@@ -14,6 +14,7 @@ ob_start();
     <select class="form-control" style="width:140px" id="statusFilter" onchange="loadDeliveries()">
       <option value="">All Status</option>
       <option value="assigned">Assigned</option>
+      <option value="in_transit">In Transit</option>
       <option value="delivered">Delivered</option>
       <option value="failed">Failed</option>
     </select>
@@ -81,7 +82,7 @@ async function loadDeliveries(page = 1) {
       <td>${App.statusBadge(d.status)}</td>
       <td>${App.formatDate(d.scheduled_date)}</td>
       <td>
-        ${d.status==='assigned'?`<a href="/egglandbd/dsr/map.php" class="btn btn-primary btn-sm"><i class="fas fa-truck"></i> Deliver</a>`:'-'}
+        ${['assigned', 'in_transit'].includes(d.status)?`<a href="/egglandbd/dsr/map.php" class="btn btn-primary btn-sm"><i class="fas fa-truck"></i> Deliver</a>`:'-'}
       </td>
     </tr>
   `).join('');
