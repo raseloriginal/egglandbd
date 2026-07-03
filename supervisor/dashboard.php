@@ -40,7 +40,7 @@ $currency = getSetting('currency_symbol', '৳');
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Supervisor Dashboard — Eggland Bangladesh</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/egglandbangladesh/assets/css/global.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 </head>
 <body>
@@ -90,8 +90,8 @@ $currency = getSetting('currency_symbol', '৳');
         </div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-            <a href="/egglandbangladesh/supervisor/agents.php" class="btn btn-primary btn-lg">🧑‍💼 Manage Agents</a>
-            <a href="/egglandbangladesh/supervisor/agent-ledger.php" class="btn btn-gold btn-lg">📒 Agent Ledger</a>
+            <a href="<?= BASE_URL ?>/supervisor/agents.php" class="btn btn-primary btn-lg">🧑‍💼 Manage Agents</a>
+            <a href="<?= BASE_URL ?>/supervisor/agent-ledger.php" class="btn btn-gold btn-lg">📒 Agent Ledger</a>
           </div>
         </div>
       </div>

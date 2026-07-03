@@ -35,7 +35,7 @@ $recentLedger = $pdo->query("
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard — Eggland Bangladesh</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/egglandbangladesh/assets/css/global.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <body>
@@ -59,25 +59,25 @@ $recentLedger = $pdo->query("
           <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
           <div class="stat-label">Supervisors</div>
           <div class="stat-value"><?= $totalSupervisors ?></div>
-          <div class="stat-sub"><a href="/egglandbangladesh/admin/supervisors.php" style="color:var(--primary);">Manage →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/supervisors.php" style="color:var(--primary);">Manage →</a></div>
         </div>
         <div class="stat-card gold">
           <div class="stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-label">Agents</div>
           <div class="stat-value"><?= $totalAgents ?></div>
-          <div class="stat-sub"><a href="/egglandbangladesh/admin/agents.php" style="color:var(--gold-dark);">View all →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/agents.php" style="color:var(--gold-dark);">View all →</a></div>
         </div>
         <div class="stat-card info">
           <div class="stat-icon"><i class="fas fa-warehouse"></i></div>
           <div class="stat-label">Retailers</div>
           <div class="stat-value"><?= $totalRetailers ?></div>
-          <div class="stat-sub"><a href="/egglandbangladesh/admin/retailers.php" style="color:var(--info);">View map →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/retailers.php" style="color:var(--info);">View map →</a></div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon"><i class="fas fa-box"></i></div>
           <div class="stat-label">Products</div>
           <div class="stat-value"><?= $totalProducts ?></div>
-          <div class="stat-sub"><a href="/egglandbangladesh/admin/products.php" style="color:var(--success);">Manage →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/products.php" style="color:var(--success);">Manage →</a></div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
@@ -111,7 +111,7 @@ $recentLedger = $pdo->query("
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fas fa-book"></i> Recent Transactions</div>
-            <a href="/egglandbangladesh/admin/ledger.php" class="btn btn-ghost btn-sm">View All</a>
+            <a href="<?= BASE_URL ?>/admin/ledger.php" class="btn btn-ghost btn-sm">View All</a>
           </div>
           <div style="overflow:hidden;">
             <table class="tbl">
@@ -143,11 +143,11 @@ $recentLedger = $pdo->query("
           </div>
           <div class="card-body">
             <div style="display:flex;flex-direction:column;gap:10px;">
-              <a href="/egglandbangladesh/admin/products.php" class="btn btn-primary"><i class="fas fa-box"></i> Manage Products</a>
-              <a href="/egglandbangladesh/admin/inventory.php" class="btn btn-gold"><i class="fas fa-warehouse"></i> Update Inventory</a>
-              <a href="/egglandbangladesh/admin/supervisors.php" class="btn btn-outline"><i class="fas fa-user-shield"></i> Manage Supervisors</a>
-              <a href="/egglandbangladesh/admin/retailers.php" class="btn btn-ghost"><i class="fas fa-map-marked-alt"></i> View Retailers Map</a>
-              <a href="/egglandbangladesh/admin/settings.php" class="btn btn-ghost"><i class="fas fa-cogs"></i> System Settings</a>
+              <a href="<?= BASE_URL ?>/admin/products.php" class="btn btn-primary"><i class="fas fa-box"></i> Manage Products</a>
+              <a href="<?= BASE_URL ?>/admin/inventory.php" class="btn btn-gold"><i class="fas fa-warehouse"></i> Update Inventory</a>
+              <a href="<?= BASE_URL ?>/admin/supervisors.php" class="btn btn-outline"><i class="fas fa-user-shield"></i> Manage Supervisors</a>
+              <a href="<?= BASE_URL ?>/admin/retailers.php" class="btn btn-ghost"><i class="fas fa-map-marked-alt"></i> View Retailers Map</a>
+              <a href="<?= BASE_URL ?>/admin/settings.php" class="btn btn-ghost"><i class="fas fa-cogs"></i> System Settings</a>
             </div>
           </div>
         </div>

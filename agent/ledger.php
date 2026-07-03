@@ -11,7 +11,7 @@ $u = currentUser();
 <meta name="theme-color" content="#8B0032">
 <title>Ledger — Eggland Bangladesh</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/egglandbangladesh/assets/css/agent.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/agent.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 </head>
 <body class="agent-body">
@@ -29,11 +29,11 @@ $u = currentUser();
   </div>
 </main>
 <nav class="bottom-nav">
-  <a href="/egglandbangladesh/agent/dashboard.php"><span class="nav-icon"><i class="fas fa-home"></i></span><span>Home</span></a>
-  <a href="/egglandbangladesh/agent/operation.php"><span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span><span>Map</span></a>
-  <a href="/egglandbangladesh/agent/retailers.php"><span class="nav-icon"><i class="fas fa-warehouse"></i></span><span>Retailers</span></a>
-  <a href="/egglandbangladesh/agent/ledger.php" class="active"><span class="nav-icon"><i class="fas fa-book"></i></span><span>Ledger</span></a>
-  <a href="/egglandbangladesh/agent/sales.php"><span class="nav-icon"><i class="fas fa-chart-line"></i></span><span>Sales</span></a>
+  <a href="<?= BASE_URL ?>/agent/dashboard.php"><span class="nav-icon"><i class="fas fa-home"></i></span><span>Home</span></a>
+  <a href="<?= BASE_URL ?>/agent/operation.php"><span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span><span>Map</span></a>
+  <a href="<?= BASE_URL ?>/agent/retailers.php"><span class="nav-icon"><i class="fas fa-warehouse"></i></span><span>Retailers</span></a>
+  <a href="<?= BASE_URL ?>/agent/ledger.php" class="active"><span class="nav-icon"><i class="fas fa-book"></i></span><span>Ledger</span></a>
+  <a href="<?= BASE_URL ?>/agent/sales.php"><span class="nav-icon"><i class="fas fa-chart-line"></i></span><span>Sales</span></a>
 </nav>
 </body>
 </html>

@@ -162,9 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <?php if (!$hasError): ?>
   <div class="done-links">
-    <a href="/egglandbangladesh/login-admin.php" class="link-admin">🔐 Admin Login</a>
-    <a href="/egglandbangladesh/login-supervisor.php" class="link-sup">👩‍💼 Supervisor Login</a>
-    <a href="/egglandbangladesh/login-agent.php" class="link-agent">📱 Agent Login</a>
+    <a href="<?= BASE_URL ?>/login-admin.php" class="link-admin">🔐 Admin Login</a>
+    <a href="<?= BASE_URL ?>/login-supervisor.php" class="link-sup">👩‍💼 Supervisor Login</a>
+    <a href="<?= BASE_URL ?>/login-agent.php" class="link-agent">📱 Agent Login</a>
   </div>
   <?php else: ?>
   <form method="POST" style="margin-top:24px">

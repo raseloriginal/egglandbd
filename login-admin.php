@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/db.php';
 
 if (isLoggedIn() && $_SESSION['role'] === 'admin') {
-    header('Location: /egglandbangladesh/admin/dashboard.php');
+    header('Location: ' . BASE_URL . '/admin/dashboard.php');
     exit;
 }
 
@@ -11,7 +11,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = loginUser(trim($_POST['username'] ?? ''), $_POST['password'] ?? '', 'admin');
     if ($result['success']) {
-        header('Location: /egglandbangladesh/admin/dashboard.php');
+        header('Location: ' . BASE_URL . '/admin/dashboard.php');
         exit;
     } else {
         $error = $result['message'];
@@ -114,7 +114,7 @@ body { font-family: 'Inter', sans-serif; background: #0D0008; min-height: 100vh;
 
     <div class="demo-hint">Demo: <strong>admin</strong> / <strong>password</strong></div>
 
-    <div class="back-link"><a href="/egglandbangladesh/index.php">← Back to role selection</a></div>
+    <div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Back to role selection</a></div>
   </div>
 </div>
 

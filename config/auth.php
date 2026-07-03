@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/db.php';
 if (session_status() === PHP_SESSION_NONE) {
     // Determine context path to isolate session names
     $uri = $_SERVER['REQUEST_URI'] ?? '';
@@ -20,17 +21,17 @@ if (session_status() === PHP_SESSION_NONE) {
  */
 function requireRole($role) {
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-        header('Location: /egglandbangladesh/login-' . $role . '.php');
+        header('Location: ' . BASE_URL . '/login-' . $role . '.php');
         exit;
     }
     if ($_SESSION['role'] !== $role) {
         // Wrong role — redirect to their own login
-        header('Location: /egglandbangladesh/login-' . $_SESSION['role'] . '.php');
+        header('Location: ' . BASE_URL . '/login-' . $_SESSION['role'] . '.php');
         exit;
     }
     if (isset($_SESSION['status']) && $_SESSION['status'] === 'inactive') {
         session_destroy();
-        header('Location: /egglandbangladesh/login-' . $role . '.php?error=inactive');
+        header('Location: ' . BASE_URL . '/login-' . $role . '.php?error=inactive');
         exit;
     }
 }

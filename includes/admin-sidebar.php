@@ -7,7 +7,7 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'A', 0, 1));
 <aside class="sidebar" id="adminSidebar">
   <div class="sidebar-logo">
     <?php if (file_exists(dirname(__DIR__) . '/assets/img/logo.png')): ?>
-      <img src="/egglandbangladesh/assets/img/logo.png" alt="Logo" style="width:34px;height:34px;object-fit:contain;border-radius:6px;">
+      <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="Logo" style="width:34px;height:34px;object-fit:contain;border-radius:6px;">
     <?php else: ?>
       <div class="sidebar-logo-icon">🥚</div>
     <?php endif; ?>
@@ -20,40 +20,40 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'A', 0, 1));
   <nav class="sidebar-nav">
     <div class="nav-section">
       <div class="nav-section-label">Overview</div>
-      <a href="/egglandbangladesh/admin/dashboard.php" class="nav-item <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/dashboard.php" class="nav-item <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-chart-bar"></i></span> Dashboard
       </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-label">Management</div>
-      <a href="/egglandbangladesh/admin/supervisors.php" class="nav-item <?= $currentPage === 'supervisors' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/supervisors.php" class="nav-item <?= $currentPage === 'supervisors' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-user-shield"></i></span> Supervisors
       </a>
-      <a href="/egglandbangladesh/admin/agents.php" class="nav-item <?= $currentPage === 'agents' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/agents.php" class="nav-item <?= $currentPage === 'agents' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-users"></i></span> Agents
       </a>
-      <a href="/egglandbangladesh/admin/retailers.php" class="nav-item <?= $currentPage === 'retailers' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/retailers.php" class="nav-item <?= $currentPage === 'retailers' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span> Retailers Map
       </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-label">Inventory & Finance</div>
-      <a href="/egglandbangladesh/admin/products.php" class="nav-item <?= $currentPage === 'products' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/products.php" class="nav-item <?= $currentPage === 'products' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-box"></i></span> Products
       </a>
-      <a href="/egglandbangladesh/admin/inventory.php" class="nav-item <?= $currentPage === 'inventory' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/inventory.php" class="nav-item <?= $currentPage === 'inventory' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-warehouse"></i></span> Inventory
       </a>
-      <a href="/egglandbangladesh/admin/ledger.php" class="nav-item <?= $currentPage === 'ledger' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/ledger.php" class="nav-item <?= $currentPage === 'ledger' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-book"></i></span> Ledger
       </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-section-label">System</div>
-      <a href="/egglandbangladesh/admin/settings.php" class="nav-item <?= $currentPage === 'settings' ? 'active' : '' ?>">
+      <a href="<?= BASE_URL ?>/admin/settings.php" class="nav-item <?= $currentPage === 'settings' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-cogs"></i></span> Settings
       </a>
     </div>
@@ -66,7 +66,7 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'A', 0, 1));
         <div class="uname"><?= htmlspecialchars($u['full_name'] ?? 'Admin') ?></div>
         <div class="urole">Administrator</div>
       </div>
-      <a href="/egglandbangladesh/logout.php" class="logout-btn" title="Logout">⏻</a>
+      <a href="<?= BASE_URL ?>/logout.php" class="logout-btn" title="Logout">⏻</a>
     </div>
   </div>
 </aside>

@@ -94,7 +94,7 @@ $currency = getSetting('currency_symbol', '৳');
 <title>Dashboard — Eggland Bangladesh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/egglandbangladesh/assets/css/agent.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/agent.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -149,25 +149,25 @@ $currency = getSetting('currency_symbol', '৳');
 
     <!-- Quick Nav -->
     <div class="quick-nav-grid">
-      <a href="/egglandbangladesh/agent/operation.php" class="quick-nav-item qn-primary">
+      <a href="<?= BASE_URL ?>/agent/operation.php" class="quick-nav-item qn-primary">
         <div class="qn-icon"><i class="fas fa-map-marked-alt text-primary-color"></i></div>
         <div class="qn-label">Operation</div>
         <div class="qn-sub">Sales & Delivery</div>
         <span class="qn-arrow">›</span>
       </a>
-      <a href="/egglandbangladesh/agent/ledger.php" class="quick-nav-item qn-gold">
+      <a href="<?= BASE_URL ?>/agent/ledger.php" class="quick-nav-item qn-gold">
         <div class="qn-icon"><i class="fas fa-book text-gold"></i></div>
         <div class="qn-label">Ledger</div>
         <div class="qn-sub">Transactions</div>
         <span class="qn-arrow">›</span>
       </a>
-      <a href="/egglandbangladesh/agent/retailers.php" class="quick-nav-item qn-info">
+      <a href="<?= BASE_URL ?>/agent/retailers.php" class="quick-nav-item qn-info">
         <div class="qn-icon"><i class="fas fa-warehouse text-success"></i></div>
         <div class="qn-label">Retailers</div>
         <div class="qn-sub"><?= $totalRetailers ?> active</div>
         <span class="qn-arrow">›</span>
       </a>
-      <a href="/egglandbangladesh/agent/sales.php" class="quick-nav-item qn-success">
+      <a href="<?= BASE_URL ?>/agent/sales.php" class="quick-nav-item qn-success">
         <div class="qn-icon"><i class="fas fa-chart-line text-success"></i></div>
         <div class="qn-label">Sales</div>
         <div class="qn-sub">Reports</div>
@@ -243,23 +243,23 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Bottom Nav -->
 <nav class="bottom-nav">
   <div class="agent-container" style="display:flex; width:100%; height:100%;">
-    <a href="/egglandbangladesh/agent/dashboard.php" class="active">
+    <a href="<?= BASE_URL ?>/agent/dashboard.php" class="active">
       <span class="nav-icon"><i class="fas fa-home"></i></span>
       <span>Home</span>
     </a>
-    <a href="/egglandbangladesh/agent/operation.php">
+    <a href="<?= BASE_URL ?>/agent/operation.php">
       <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span>
       <span>Map</span>
     </a>
-    <a href="/egglandbangladesh/agent/retailers.php">
+    <a href="<?= BASE_URL ?>/agent/retailers.php">
       <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
       <span>Retailers</span>
     </a>
-    <a href="/egglandbangladesh/agent/ledger.php">
+    <a href="<?= BASE_URL ?>/agent/ledger.php">
       <span class="nav-icon"><i class="fas fa-book"></i></span>
       <span>Ledger</span>
     </a>
-    <a href="/egglandbangladesh/agent/sales.php">
+    <a href="<?= BASE_URL ?>/agent/sales.php">
       <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
       <span>Sales</span>
     </a>

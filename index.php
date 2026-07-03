@@ -4,7 +4,7 @@ require_once __DIR__ . '/config/auth.php';
 // Redirect based on logged-in role or show selector
 if (isLoggedIn()) {
     $role = $_SESSION['role'] ?? 'admin';
-    header('Location: /egglandbangladesh/' . $role . '/dashboard.php');
+    header('Location: ' . BASE_URL . '/' . $role . '/dashboard.php');
     exit;
 }
 ?>

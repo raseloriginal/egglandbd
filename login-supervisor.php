@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/db.php';
 
 if (isLoggedIn() && $_SESSION['role'] === 'supervisor') {
-    header('Location: /egglandbangladesh/supervisor/dashboard.php');
+    header('Location: ' . BASE_URL . '/supervisor/dashboard.php');
     exit;
 }
 
@@ -11,7 +11,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = loginUser(trim($_POST['username'] ?? ''), $_POST['password'] ?? '', 'supervisor');
     if ($result['success']) {
-        header('Location: /egglandbangladesh/supervisor/dashboard.php');
+        header('Location: ' . BASE_URL . '/supervisor/dashboard.php');
         exit;
     } else {
         $error = $result['message'];
@@ -78,7 +78,7 @@ body::after { content: ''; position: absolute; top: -100px; right: -100px; width
       <button type="submit" class="btn-login">Sign In →</button>
     </form>
     <div class="demo-hint">Demo: <strong>supervisor1</strong> / <strong>super123</strong></div>
-    <div class="back-link"><a href="/egglandbangladesh/index.php">← Back to role selection</a></div>
+    <div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Back to role selection</a></div>
   </div>
 </div>
 </body>

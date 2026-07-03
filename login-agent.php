@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/db.php';
 
 if (isLoggedIn() && $_SESSION['role'] === 'agent') {
-    header('Location: /egglandbangladesh/agent/dashboard.php');
+    header('Location: ' . BASE_URL . '/agent/dashboard.php');
     exit;
 }
 
@@ -11,7 +11,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = loginUser(trim($_POST['username'] ?? ''), $_POST['password'] ?? '', 'agent');
     if ($result['success']) {
-        header('Location: /egglandbangladesh/agent/dashboard.php');
+        header('Location: ' . BASE_URL . '/agent/dashboard.php');
         exit;
     } else {
         $error = $result['message'];
@@ -81,6 +81,6 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(160deg, #8B
   <div class="demo-hint">Demo: <strong>agent1</strong> / <strong>agent123</strong></div>
 </div>
 
-<div class="back-link"><a href="/egglandbangladesh/index.php">← Role selection</a></div>
+<div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Role selection</a></div>
 </body>
 </html>

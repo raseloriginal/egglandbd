@@ -41,10 +41,10 @@ $currency = getSetting('currency_symbol', '৳');
 <meta name="theme-color" content="#8B0032">
 <title>Operation Map — Eggland Bangladesh</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/egglandbangladesh/assets/css/agent.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/agent.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <!-- Leaflet CSS -->
-<link rel="stylesheet" href="/egglandbangladesh/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.css">
 <style>
 body { overflow: hidden; }
 .op-tab-icon { font-size: 20px; display: block; margin-bottom: 2px; }
@@ -91,19 +91,19 @@ body { overflow: hidden; }
 
 <!-- Bottom Nav -->
 <nav class="bottom-nav" style="position:fixed;bottom:0;">
-  <a href="/egglandbangladesh/agent/dashboard.php">
+  <a href="<?= BASE_URL ?>/agent/dashboard.php">
     <span class="nav-icon"><i class="fas fa-home"></i></span><span>Home</span>
   </a>
-  <a href="/egglandbangladesh/agent/operation.php" class="active">
+  <a href="<?= BASE_URL ?>/agent/operation.php" class="active">
     <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span><span>Map</span>
   </a>
-  <a href="/egglandbangladesh/agent/retailers.php">
+  <a href="<?= BASE_URL ?>/agent/retailers.php">
     <span class="nav-icon"><i class="fas fa-warehouse"></i></span><span>Retailers</span>
   </a>
-  <a href="/egglandbangladesh/agent/ledger.php">
+  <a href="<?= BASE_URL ?>/agent/ledger.php">
     <span class="nav-icon"><i class="fas fa-book"></i></span><span>Ledger</span>
   </a>
-  <a href="/egglandbangladesh/agent/sales.php">
+  <a href="<?= BASE_URL ?>/agent/sales.php">
     <span class="nav-icon"><i class="fas fa-chart-line"></i></span><span>Sales</span>
   </a>
 </nav>
@@ -298,7 +298,7 @@ body { overflow: hidden; }
 </div>
 
 <!-- Leaflet JS -->
-<script src="/egglandbangladesh/assets/vendor/leaflet/leaflet.js"></script>
+<script src="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.js"></script>
 
 <script>
 // ===== DATA FROM PHP =====

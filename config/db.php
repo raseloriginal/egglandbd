@@ -9,14 +9,18 @@ if (isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], $whiteli
 }
 
 if ($is_local) {
+    define('BASE_URL', '/egglandbangladesh');
     // Localhost configuration
+
     define('DB_HOST', 'localhost');
     define('DB_NAME', 'eggland_bangladesh');
     define('DB_USER', 'root');
     define('DB_PASS', '');
     define('DB_PORT', 3306);
 } else {
+    define('BASE_URL', '');
     // Live server configuration
+
     define('DB_HOST', 'localhost');
     define('DB_NAME', 'rasedwwq_eggland');
     define('DB_USER', 'rasedwwq_eggland');
@@ -43,7 +47,7 @@ function getDB() {
             global $is_local;
             if (!defined('INSTALL_PAGE')) {
                 if (isset($is_local) && $is_local) {
-                    header('Location: /egglandbangladesh/install.php');
+                    header('Location: ' . BASE_URL . '/install.php');
                 } else {
                     // For live server, redirect to root install.php
                     // Or if it fails, just show the error so the user can debug
