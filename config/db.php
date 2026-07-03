@@ -1,10 +1,28 @@
 <?php
 // Database Configuration
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'eggland_bangladesh');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_PORT', 3306);
+$whitelist = array('127.0.0.1', '::1', 'localhost');
+$is_local = false;
+if (isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], $whitelist)) {
+    $is_local = true;
+} elseif (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
+    $is_local = true;
+}
+
+if ($is_local) {
+    // Localhost configuration
+    define('DB_HOST', 'localhost');
+    define('DB_NAME', 'eggland_bangladesh');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+    define('DB_PORT', 3306);
+} else {
+    // Live server configuration
+    define('DB_HOST', 'localhost');
+    define('DB_NAME', 'rasedwwq_eggland');
+    define('DB_USER', 'rasedwwq_eggland');
+    define('DB_PASS', '#Ph?KKOC9GdJAE.m');
+    define('DB_PORT', 3306);
+}
 
 function getDB() {
     static $pdo = null;
