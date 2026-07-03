@@ -1,166 +1,140 @@
 <?php
-$pageTitle = 'System Settings';
+require_once dirname(__DIR__) . '/config/auth.php';
+require_once dirname(__DIR__) . '/config/db.php';
+requireRole('admin');
+$pdo = getDB();
 
-$sidebarNav = '
-  <div class="sidebar-section-title">Main</div>
-  <a href="/egglandbd/admin/index.php" class="sidebar-link"><i class="fas fa-tachometer-alt sidebar-icon"></i> Dashboard</a>
+$success = $error = '';
 
-  <div class="sidebar-section-title">Management</div>
-  <a href="/egglandbd/admin/agents.php" class="sidebar-link"><i class="fas fa-user-tie sidebar-icon"></i> Agents</a>
-  <a href="/egglandbd/admin/products.php" class="sidebar-link"><i class="fas fa-egg sidebar-icon"></i> Products</a>
-  <a href="/egglandbd/admin/prices.php" class="sidebar-link"><i class="fas fa-tags sidebar-icon"></i> Price Management</a>
-  <a href="/egglandbd/admin/egg-lots.php" class="sidebar-link"><i class="fas fa-box sidebar-icon"></i> Egg Lots</a>
-  <a href="/egglandbd/admin/demands.php" class="sidebar-link"><i class="fas fa-clipboard-list sidebar-icon"></i> Demands</a>
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $settings = [
+        'map_center_lat' => trim($_POST['map_center_lat'] ?? '23.8103'),
+        'map_center_lng' => trim($_POST['map_center_lng'] ?? '90.4125'),
+        'map_zoom'       => (int)($_POST['map_zoom'] ?? 12),
+        'business_name'  => trim($_POST['business_name'] ?? 'Eggland Bangladesh'),
+        'currency_symbol'=> trim($_POST['currency_symbol'] ?? '৳'),
+    ];
+    foreach ($settings as $key => $value) {
+        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$key, $value, $value]);
+    }
+    $success = 'Settings saved successfully.';
+}
 
-  <div class="sidebar-section-title">Operations</div>
-  <a href="/egglandbd/admin/orders.php" class="sidebar-link"><i class="fas fa-shopping-cart sidebar-icon"></i> Orders</a>
-  <a href="/egglandbd/admin/deliveries.php" class="sidebar-link"><i class="fas fa-truck sidebar-icon"></i> Deliveries</a>
-  <a href="/egglandbd/admin/retailers.php" class="sidebar-link"><i class="fas fa-store sidebar-icon"></i> Retailers</a>
-  <a href="/egglandbd/admin/tracking.php" class="sidebar-link"><i class="fas fa-map-marked-alt sidebar-icon"></i> Live Tracking</a>
-
-  <div class="sidebar-section-title">Finance</div>
-  <a href="/egglandbd/admin/finance.php" class="sidebar-link"><i class="fas fa-wallet sidebar-icon"></i> Finance</a>
-  <a href="/egglandbd/admin/reports.php" class="sidebar-link"><i class="fas fa-chart-bar sidebar-icon"></i> Reports</a>
-
-  <div class="sidebar-section-title">System</div>
-  <a href="/egglandbd/admin/settings.php" class="sidebar-link"><i class="fas fa-cog sidebar-icon"></i> Settings</a>
-';
-
-ob_start();
+// Load current settings
+$lat  = getSetting('map_center_lat', '23.8103');
+$lng  = getSetting('map_center_lng', '90.4125');
+$zoom = getSetting('map_zoom', '12');
+$biz  = getSetting('business_name', 'Eggland Bangladesh');
+$curr = getSetting('currency_symbol', '৳');
 ?>
-<div class="stats-grid" style="margin-bottom:24px">
-  <div class="stat-card">
-    <div class="stat-label">Database Size</div>
-    <div class="stat-value" id="setDbSize"><div class="spinner"></div></div>
-    <div class="stat-icon"><i class="fas fa-database"></i></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Audit Logs</div>
-    <div class="stat-value" id="setAuditCount"><div class="spinner"></div></div>
-    <div class="stat-icon"><i class="fas fa-history"></i></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">PHP Version</div>
-    <div class="stat-value" id="setPhpVersion"><div class="spinner"></div></div>
-    <div class="stat-icon"><i class="fab fa-php"></i></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Settings — Admin Panel — Eggland Bangladesh</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/egglandbangladesh/assets/css/global.css">
+<?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+.pick-map { height: 320px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--border); cursor: crosshair; }
+</style>
+</head>
+<body>
+<div class="layout-wrapper">
+  <?php include dirname(__DIR__) . '/includes/admin-sidebar.php'; ?>
+  <div class="main-content">
+    <div class="top-header">
+      <div><div class="header-title">System Settings</div><div class="header-subtitle">Configure business and map settings</div></div>
+      <div class="header-spacer"></div>
+    </div>
+    <div class="page-content">
+      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+
+      <form method="POST">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="settings-grid">
+
+          <!-- Business Settings -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">🏢 Business Settings</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Business Name</label>
+                <input type="text" name="business_name" class="form-control" value="<?= htmlspecialchars($biz) ?>">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Currency Symbol</label>
+                <input type="text" name="currency_symbol" class="form-control" value="<?= htmlspecialchars($curr) ?>" placeholder="৳">
+                <div class="form-hint">Default: ৳ (BDT Taka)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Map Settings -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">🗺️ Map Center Settings</div></div>
+            <div class="card-body">
+              <div class="alert alert-info">Click on the map below to set the default map center for all panels.</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Latitude</label>
+                  <input type="text" name="map_center_lat" id="mapLat" class="form-control" value="<?= htmlspecialchars($lat) ?>" placeholder="23.8103">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Longitude</label>
+                  <input type="text" name="map_center_lng" id="mapLng" class="form-control" value="<?= htmlspecialchars($lng) ?>" placeholder="90.4125">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Default Zoom (1–19)</label>
+                <input type="number" name="map_zoom" id="mapZoom" class="form-control" value="<?= htmlspecialchars($zoom) ?>" min="1" max="19">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Map picker -->
+        <div class="card mt-24">
+          <div class="card-header">
+            <div class="card-title">📍 Click Map to Set Center</div>
+            <div class="text-muted fs-12">Click anywhere on the map to update the latitude and longitude above</div>
+          </div>
+          <div class="card-body" style="padding:16px;">
+            <div id="pickMap" class="pick-map"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary btn-lg">💾 Save Settings</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
-  <div class="card">
-    <div class="card-header">
-      <i class="fas fa-cog" style="color:var(--maroon)"></i>
-      <span class="card-title">General Application Config</span>
-    </div>
-    <div class="card-body" style="padding:20px">
-      <div class="form-group">
-        <label class="form-label">Application Name</label>
-        <input type="text" class="form-control" id="setAppName" readonly>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Application URL</label>
-        <input type="text" class="form-control" id="setAppUrl" readonly>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Currency Symbol</label>
-        <input type="text" class="form-control" id="setCurrency" readonly>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Low Stock Threshold</label>
-        <input type="text" class="form-control" id="setLowStock" readonly>
-      </div>
-      <p style="font-size:11px;color:var(--text-muted);margin-top:10px">
-        Note: These parameters are defined in the backend configuration file <code>config.php</code> and are currently read-only.
-      </p>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <i class="fas fa-server" style="color:var(--gold)"></i>
-      <span class="card-title">Server & Environment Info</span>
-    </div>
-    <div class="card-body" style="padding:20px">
-      <div class="form-group">
-        <label class="form-label">Database Name</label>
-        <input type="text" class="form-control" id="setDbName" readonly>
-      </div>
-      <div class="form-group">
-        <label class="form-label">MySQL Version</label>
-        <input type="text" class="form-control" id="setMysqlVersion" readonly>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label class="form-label">APCu Cache</label>
-          <div style="margin-top:8px"><span id="setApcu" class="badge">Checking...</span></div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Debug Mode</label>
-          <div style="margin-top:8px"><span id="setDebug" class="badge">Checking...</span></div>
-        </div>
-      </div>
-      <div style="margin-top:24px;border-top:1px solid var(--border-light);padding-top:16px">
-        <button class="btn btn-outline btn-block" onclick="clearLocalCache()"><i class="fas fa-broom"></i> Clear Local Browser Cache</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<?php
-$content = ob_get_clean();
-
-$scripts = <<<'JS'
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-async function loadSettings() {
-  const resp = await App.get('admin/settings.php');
-  if (!resp?.success) { App.toast('error', 'Error', 'Failed to retrieve system settings'); return; }
+const initLat = parseFloat(document.getElementById('mapLat').value) || 23.8103;
+const initLng = parseFloat(document.getElementById('mapLng').value) || 90.4125;
+const initZoom = parseInt(document.getElementById('mapZoom').value) || 12;
 
-  const d = resp.data;
+const map = L.map('pickMap').setView([initLat, initLng], initZoom);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
 
-  // Stats
-  document.getElementById('setDbSize').textContent = d.db_size;
-  document.getElementById('setAuditCount').textContent = d.audit_logs_count.toLocaleString();
-  document.getElementById('setPhpVersion').textContent = d.php_version;
+let marker = L.marker([initLat, initLng]).addTo(map);
 
-  // General settings
-  document.getElementById('setAppName').value = d.app_name;
-  document.getElementById('setAppUrl').value = d.app_url;
-  document.getElementById('setCurrency').value = d.currency;
-  document.getElementById('setLowStock').value = d.low_stock_threshold + ' pieces';
+map.on('click', function(e) {
+  const {lat, lng} = e.latlng;
+  document.getElementById('mapLat').value = lat.toFixed(6);
+  document.getElementById('mapLng').value = lng.toFixed(6);
+  marker.setLatLng([lat, lng]);
+});
 
-  // Server info
-  document.getElementById('setDbName').value = d.db_name;
-  document.getElementById('setMysqlVersion').value = d.mysql_version;
-
-  // Badges
-  const apcuBadge = document.getElementById('setApcu');
-  if (d.apcu_enabled) {
-    apcuBadge.textContent = 'Active';
-    apcuBadge.className = 'badge badge-success';
-  } else {
-    apcuBadge.textContent = 'Inactive';
-    apcuBadge.className = 'badge badge-cancelled';
-  }
-
-  const debugBadge = document.getElementById('setDebug');
-  if (d.debug_mode) {
-    debugBadge.textContent = 'Enabled';
-    debugBadge.className = 'badge badge-pending';
-  } else {
-    debugBadge.textContent = 'Disabled';
-    debugBadge.className = 'badge badge-success';
-  }
-}
-
-function clearLocalCache() {
-  localStorage.clear();
-  App.toast('success', 'Local Storage Cleared', 'Please re-login if needed.');
-  setTimeout(() => window.location.reload(), 1500);
-}
-
-loadSettings();
+map.on('zoomend', function() {
+  document.getElementById('mapZoom').value = map.getZoom();
+});
 </script>
-JS;
-
-include_once __DIR__ . '/../includes/layout.php';
-?>
+<style>@media(max-width:768px){.settings-grid{grid-template-columns:1fr!important;}}</style>
+</body>
+</html>

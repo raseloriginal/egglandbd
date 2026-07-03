@@ -1,323 +1,157 @@
 <?php
-$pageTitle = 'Product Management';
+require_once dirname(__DIR__) . '/config/auth.php';
+require_once dirname(__DIR__) . '/config/db.php';
+requireRole('admin');
+$u = currentUser();
+$pdo = getDB();
 
-$sidebarNav = '
-  <div class="sidebar-section-title">Main</div>
-  <a href="/egglandbd/admin/index.php" class="sidebar-link"><i class="fas fa-tachometer-alt sidebar-icon"></i> Dashboard</a>
+$success = $error = '';
 
-  <div class="sidebar-section-title">Management</div>
-  <a href="/egglandbd/admin/agents.php" class="sidebar-link"><i class="fas fa-user-tie sidebar-icon"></i> Agents</a>
-  <a href="/egglandbd/admin/products.php" class="sidebar-link"><i class="fas fa-egg sidebar-icon"></i> Products</a>
-  <a href="/egglandbd/admin/prices.php" class="sidebar-link"><i class="fas fa-tags sidebar-icon"></i> Price Management</a>
-  <a href="/egglandbd/admin/egg-lots.php" class="sidebar-link"><i class="fas fa-box sidebar-icon"></i> Egg Lots</a>
-  <a href="/egglandbd/admin/demands.php" class="sidebar-link"><i class="fas fa-clipboard-list sidebar-icon"></i> Demands</a>
+// Add/Edit/Delete product
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'add' || $action === 'edit') {
+        $name     = trim($_POST['name'] ?? '');
+        $unit     = in_array($_POST['unit_type']??'', ['case','kg','dozen','piece','bag','crate']) ? $_POST['unit_type'] : 'case';
+        $price    = (float)($_POST['price'] ?? 0);
+        $status   = in_array($_POST['status']??'', ['active','inactive']) ? $_POST['status'] : 'active';
+        if (!$name) { $error = 'Product name is required.'; }
+        elseif ($action === 'add') {
+            $pdo->prepare("INSERT INTO products (name,unit_type,price,status) VALUES (?,?,?,?)")->execute([$name,$unit,$price,$status]);
+            $pid = $pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?,0) ON DUPLICATE KEY UPDATE product_id=product_id")->execute([$pid]);
+            $success = "Product '$name' added.";
+        } else {
+            $pid = (int)($_POST['product_id'] ?? 0);
+            $pdo->prepare("UPDATE products SET name=?,unit_type=?,price=?,status=? WHERE id=?")->execute([$name,$unit,$price,$status,$pid]);
+            $success = "Product '$name' updated.";
+        }
+    }
+    if ($action === 'delete') {
+        $pid = (int)($_POST['product_id'] ?? 0);
+        try { $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$pid]); $success = 'Product deleted.'; }
+        catch(Exception $e) { $error = 'Cannot delete: product has related records.'; }
+    }
+}
 
-  <div class="sidebar-section-title">Operations</div>
-  <a href="/egglandbd/admin/orders.php" class="sidebar-link"><i class="fas fa-shopping-cart sidebar-icon"></i> Orders</a>
-  <a href="/egglandbd/admin/deliveries.php" class="sidebar-link"><i class="fas fa-truck sidebar-icon"></i> Deliveries</a>
-  <a href="/egglandbd/admin/retailers.php" class="sidebar-link"><i class="fas fa-store sidebar-icon"></i> Retailers</a>
-  <a href="/egglandbd/admin/tracking.php" class="sidebar-link"><i class="fas fa-map-marked-alt sidebar-icon"></i> Live Tracking</a>
-
-  <div class="sidebar-section-title">Finance</div>
-  <a href="/egglandbd/admin/finance.php" class="sidebar-link"><i class="fas fa-wallet sidebar-icon"></i> Finance</a>
-  <a href="/egglandbd/admin/reports.php" class="sidebar-link"><i class="fas fa-chart-bar sidebar-icon"></i> Reports</a>
-
-  <div class="sidebar-section-title">System</div>
-  <a href="/egglandbd/admin/settings.php" class="sidebar-link"><i class="fas fa-cog sidebar-icon"></i> Settings</a>
-';
-
-ob_start();
+$products = $pdo->query("SELECT p.*, COALESCE(i.qty_available,0) as stock FROM products p LEFT JOIN inventory i ON i.product_id=p.id ORDER BY p.name")->fetchAll();
+$currency = getSetting('currency_symbol', '৳');
 ?>
-<div class="card" style="margin-bottom:20px">
-  <div class="toolbar">
-    <div class="toolbar-search">
-      <i class="fas fa-search toolbar-search-icon"></i>
-      <input type="text" class="form-control" id="searchInput" placeholder="Search products..." oninput="debounce(loadProducts,400)()">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — Admin Panel — Eggland Bangladesh</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/egglandbangladesh/assets/css/global.css">
+<?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
+</head>
+<body>
+<div class="layout-wrapper">
+  <?php include dirname(__DIR__) . '/includes/admin-sidebar.php'; ?>
+  <div class="main-content">
+    <div class="top-header">
+      <div><div class="header-title">Products</div><div class="header-subtitle">Manage egg products and pricing</div></div>
+      <div class="header-spacer"></div>
+      <button class="btn btn-primary" onclick="openModal('modalAdd')">➕ Add Product</button>
     </div>
-    <select class="form-control" style="width:160px" id="categoryFilter" onchange="loadProducts()">
-      <option value="">All Categories</option>
-    </select>
-    <select class="form-control" style="width:120px" id="statusFilter" onchange="loadProducts()">
-      <option value="active">Active</option>
-      <option value="">All</option>
-      <option value="inactive">Inactive</option>
-    </select>
-    <div class="toolbar-actions">
-      <button class="btn btn-primary" onclick="openAddProduct()"><i class="fas fa-plus"></i> Add Product</button>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <i class="fas fa-egg" style="color:var(--maroon)"></i>
-    <span class="card-title">Products</span>
-    <span id="totalBadge" class="badge badge-active" style="margin-left:8px">0</span>
-  </div>
-  <div class="table-wrap">
-    <table class="data-table" id="productsTable">
-      <thead>
-        <tr>
-          <th>Product</th><th>Category</th><th>Unit</th><th>Buy Price</th><th>Sell Price</th>
-          <th>Stock</th><th>Reserved</th><th>Status</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="productsBody">
-        <tr><td colspan="9" style="text-align:center;padding:40px"><div class="spinner" style="margin:auto"></div></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="pagination" id="productsPagination"></div>
-</div>
-
-<!-- Add/Edit Product Modal -->
-<div class="modal-overlay" id="productModal">
-  <div class="modal-box" style="max-width:600px">
-    <div class="modal-header">
-      <i class="fas fa-egg" style="color:var(--maroon)"></i>
-      <div class="modal-title" id="productModalTitle">Add Product</div>
-      <button class="modal-close" onclick="App.closeModal('productModal')"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="productId">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Product Name *</label>
-          <input type="text" class="form-control" id="pName" placeholder="e.g. Desi Egg (Tray 30)">
+    <div class="page-content">
+      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+      <div class="table-wrapper">
+        <div class="table-toolbar">
+          <div class="toolbar-title">📦 Product Catalog (<?= count($products) ?>)</div>
+          <div class="spacer"></div>
+          <div class="search-input-wrap"><input type="text" class="search-input" placeholder="Search..." oninput="filterTbl(this,'prodTbl')"></div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Category</label>
-          <select class="form-control" id="pCategory">
-            <option value="">Select Category</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Unit</label>
-          <select class="form-control" id="pUnit">
-            <option value="piece">Piece</option>
-            <option value="tray">Tray</option>
-            <option value="crate">Crate</option>
-            <option value="pack">Pack</option>
-            <option value="dozen">Dozen</option>
-          </select>
-        </div>
-        <!-- Image Upload -->
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Product Image</label>
-          <div id="pImagePreviewContainer" style="margin-bottom:8px;display:none">
-            <img id="pImagePreview" src="" alt="Product Image" style="max-width:100%;border-radius:var(--radius-sm)"/>
-          </div>
-          <input type="file" class="form-control" id="pImage" accept="image/*">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Unit Size (pieces)</label>
-          <input type="number" class="form-control" id="pUnitSize" value="1" min="1">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Buying Price (৳) *</label>
-          <input type="number" class="form-control" id="pBuyPrice" step="0.01" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Selling Price (৳) *</label>
-          <input type="number" class="form-control" id="pSellPrice" step="0.01" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Initial Stock</label>
-          <input type="number" class="form-control" id="pStock" value="0" min="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Low Stock Alert</label>
-          <input type="number" class="form-control" id="pLowAlert" value="100" min="0">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Description</label>
-          <textarea class="form-control" id="pDesc" rows="2"></textarea>
+        <div style="overflow-x:auto;">
+        <table class="tbl" id="prodTbl">
+          <thead><tr><th>#</th><th>Product Name</th><th>Unit Type</th><th class="text-right">Price</th><th class="text-right">Stock</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody>
+            <?php if (empty($products)): ?>
+              <tr><td colspan="8"><div class="table-empty"><div class="empty-icon">📦</div><p>No products yet.</p></div></td></tr>
+            <?php else: ?>
+              <?php foreach ($products as $i=>$p): ?>
+              <tr data-search="<?= strtolower($p['name'].' '.$p['unit_type']) ?>">
+                <td class="text-muted fs-12"><?= $i+1 ?></td>
+                <td class="fw-700"><?= htmlspecialchars($p['name']) ?></td>
+                <td><span class="badge badge-info"><?= $p['unit_type'] ?></span></td>
+                <td class="text-right fw-700"><?= $currency ?><?= number_format($p['price'],2) ?></td>
+                <td class="text-right"><?= number_format($p['stock'],2) ?></td>
+                <td><span class="badge <?= $p['status']==='active'?'badge-success':'badge-danger' ?>"><?= $p['status'] ?></span></td>
+                <td class="text-muted fs-12"><?= date('d M Y', strtotime($p['created_at'])) ?></td>
+                <td><div style="display:flex;gap:6px;">
+                  <button class="btn btn-ghost btn-sm" onclick='editProd(<?= json_encode($p, JSON_HEX_APOS) ?>)'>✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="delProd(<?= $p['id'] ?>,'<?= addslashes($p['name']) ?>')">🗑️</button>
+                </div></td>
+              </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </tbody>
+        </table>
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="App.closeModal('productModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveProduct()"><i class="fas fa-save"></i> Save Product</button>
-    </div>
   </div>
 </div>
 
-<?php
-$content = ob_get_clean();
-$scripts = <<<'JS'
+<!-- Add Modal -->
+<div class="modal-overlay" id="modalAdd" onclick="closeModalOuter(event,'modalAdd')">
+  <div class="modal"><div class="modal-header"><div class="modal-title">➕ Add Product</div><button class="modal-close" onclick="closeModal('modalAdd')">✕</button></div>
+  <form method="POST"><input type="hidden" name="action" value="add">
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Product Name *</label><input type="text" name="name" class="form-control" required placeholder="e.g. Farm Egg (White)"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Unit Type *</label>
+        <select name="unit_type" class="form-control form-select">
+          <?php foreach (['case','kg','dozen','piece','bag','crate'] as $u): ?><option value="<?= $u ?>"><?= ucfirst($u) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Price (<?= $currency ?>) per unit</label>
+        <div class="input-group"><span class="input-prefix"><?= $currency ?></span><input type="number" name="price" class="form-control" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select name="status" class="form-control form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+    </div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary">➕ Add Product</button></div>
+  </form></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="modalEdit" onclick="closeModalOuter(event,'modalEdit')">
+  <div class="modal"><div class="modal-header"><div class="modal-title">✏️ Edit Product</div><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
+  <form method="POST"><input type="hidden" name="action" value="edit"><input type="hidden" name="product_id" id="editId">
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Product Name</label><input type="text" name="name" id="editName" class="form-control" required></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Unit Type</label>
+        <select name="unit_type" id="editUnit" class="form-control form-select">
+          <?php foreach (['case','kg','dozen','piece','bag','crate'] as $ut): ?><option value="<?= $ut ?>"><?= ucfirst($ut) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Price (<?= $currency ?>)</label>
+        <div class="input-group"><span class="input-prefix"><?= $currency ?></span><input type="number" name="price" id="editPrice" class="form-control" min="0" step="0.01"></div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Status</label>
+      <select name="status" id="editStatus" class="form-control form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+    </div>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary">💾 Save</button></div>
+  </form></div>
+</div>
+<form method="POST" id="delForm" style="display:none;"><input type="hidden" name="action" value="delete"><input type="hidden" name="product_id" id="delId"></form>
+
 <script>
-async function loadCategories() {
-  const resp = await App.get('shared/profile.php', { categories: 1 });
-  if (!resp?.success) return;
-  const cats = resp.data;
-  ['categoryFilter', 'pCategory'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const current = sel.value;
-    const options = id === 'categoryFilter' ? '<option value="">All Categories</option>' : '<option value="">Select Category</option>';
-    sel.innerHTML = options + cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    sel.value = current;
-  });
-}
-
-async function loadProducts(page = 1) {
-  const params = {
-    page, search: document.getElementById('searchInput').value,
-    category_id: document.getElementById('categoryFilter').value,
-    status: document.getElementById('statusFilter').value, page_size: 20,
-  };
-
-  const tbody = document.getElementById('productsBody');
-  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px"><div class="spinner" style="margin:auto"></div></td></tr>';
-
-  const resp = await App.get('admin/products.php', params);
-  if (!resp?.success) return;
-
-  document.getElementById('totalBadge').textContent = resp.pagination.total;
-
-  if (!resp.data.length) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">No products</div></div></td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = resp.data.map(p => {
-    const available = p.current_stock - p.reserved_stock;
-    const lowStock = available <= p.low_stock_alert;
-    return `<tr class="fade-in">
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;overflow:hidden;border-radius:var(--radius-sm);background:#f0f0f0;display:flex;align-items:center;justify-content:center">
-            ${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover"/>` : '🥚'}
-          </div>
-          <div>
-            <div style="font-weight:700">${p.name}</div>
-            <div style="font-size:11px;color:var(--text-muted)">Unit: ${p.unit}</div>
-          </div>
-        </div>
-      </td>
-      <td>${p.category_name||'-'}</td>
-      <td>${p.unit} (×${p.unit_size})</td>
-      <td>${App.formatMoney(p.buying_price)}</td>
-      <td><b style="color:var(--maroon)">${App.formatMoney(p.selling_price)}</b></td>
-      <td><span style="color:${lowStock?'var(--danger)':'var(--success)'};font-weight:700">${p.current_stock}</span></td>
-      <td style="color:var(--text-muted)">${p.reserved_stock}</td>
-      <td>${App.statusBadge(p.status)}</td>
-      <td>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm btn-ghost" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id}, '${p.name}')"><i class="fas fa-trash"></i></button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-
-  App.renderPagination('productsPagination', resp.pagination.total, page, resp.pagination.page_size, 'loadProducts');
-}
-
-function openAddProduct() {
-  document.getElementById('productId').value = '';
-  document.getElementById('productModalTitle').textContent = 'Add Product';
-  ['pName','pDesc'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('pUnit').value = 'piece';
-  document.getElementById('pUnitSize').value = 1;
-  document.getElementById('pBuyPrice').value = '';
-  document.getElementById('pSellPrice').value = '';
-  document.getElementById('pStock').value = 0;
-  document.getElementById('pLowAlert').value = 100;
-  document.getElementById('pCategory').value = '';
-  // reset image preview
-  const previewContainer = document.getElementById('pImagePreviewContainer');
-  const previewImg = document.getElementById('pImagePreview');
-  previewImg.src = '';
-  previewContainer.style.display = 'none';
-  document.getElementById('pImage').value = '';
-  App.openModal('productModal');
-}
-
-async function editProduct(id) {
-  const resp = await App.get(`admin/products.php?id=${id}`);
-  if (!resp?.success) return;
-  const p = resp.data;
-  document.getElementById('productId').value = p.id;
-  document.getElementById('productModalTitle').textContent = 'Edit Product';
-  document.getElementById('pName').value = p.name;
-
-  document.getElementById('pDesc').value = p.description||'';
-  document.getElementById('pUnit').value = p.unit;
-  document.getElementById('pUnitSize').value = p.unit_size;
-  document.getElementById('pBuyPrice').value = p.buying_price;
-  document.getElementById('pSellPrice').value = p.selling_price;
-  document.getElementById('pStock').value = p.current_stock;
-  document.getElementById('pLowAlert').value = p.low_stock_alert;
-  document.getElementById('pCategory').value = p.category_id||'';
-  // show existing image if any
-  const previewContainer = document.getElementById('pImagePreviewContainer');
-  const previewImg = document.getElementById('pImagePreview');
-  if (p.image) {
-    previewImg.src = p.image;
-    previewContainer.style.display = 'block';
-  } else {
-    previewImg.src = '';
-    previewContainer.style.display = 'none';
-  }
-  document.getElementById('pImage').value = '';
-  App.openModal('productModal');
-}
-
-async function saveProduct() {
-  const id = document.getElementById('productId').value;
-  // Build FormData to support file upload
-  const formData = new FormData();
-  formData.append('name', document.getElementById('pName').value.trim());
-
-  formData.append('description', document.getElementById('pDesc').value.trim());
-  formData.append('category_id', document.getElementById('pCategory').value || '');
-  formData.append('unit', document.getElementById('pUnit').value);
-  formData.append('unit_size', parseInt(document.getElementById('pUnitSize').value));
-  formData.append('buying_price', parseFloat(document.getElementById('pBuyPrice').value));
-  formData.append('selling_price', parseFloat(document.getElementById('pSellPrice').value));
-  formData.append('current_stock', parseInt(document.getElementById('pStock').value));
-  formData.append('low_stock_alert', parseInt(document.getElementById('pLowAlert').value));
-
-  const imageFile = document.getElementById('pImage').files[0];
-  if (imageFile) formData.append('image', imageFile);
-
-  // Basic validation
-  if (!formData.get('name') || !formData.get('buying_price') || !formData.get('selling_price')) {
-    App.toast('warning', 'Required', 'Name and prices are required');
-    return;
-  }
-
-  let resp;
-  if (id) {
-    // Update uses update_id query param per backend implementation
-    resp = await App.upload(`admin/products.php?update_id=${id}`, formData);
-  } else {
-    resp = await App.upload('admin/products.php', formData);
-  }
-
-  if (resp?.success) {
-    App.toast('success', id ? 'Updated!' : 'Created!', formData.get('name'));
-    App.closeModal('productModal');
-    loadProducts();
-  } else {
-    App.toast('error', 'Failed', resp?.message);
-  }
-}
-
-async function deleteProduct(id, name) {
-  App.confirm('Deactivate Product', `Deactivate "${name}"?`, async () => {
-    const resp = await App.delete(`admin/products.php?id=${id}`);
-    if (resp?.success) { App.toast('success', 'Done', 'Product deactivated'); loadProducts(); }
-    else App.toast('error', 'Failed', resp?.message);
-  });
-}
-
-loadCategories();
-loadProducts();
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
+function editProd(p){document.getElementById('editId').value=p.id;document.getElementById('editName').value=p.name;document.getElementById('editUnit').value=p.unit_type;document.getElementById('editPrice').value=p.price;document.getElementById('editStatus').value=p.status;openModal('modalEdit');}
+function delProd(id,name){if(confirm('Delete product "'+name+'"?')){document.getElementById('delId').value=id;document.getElementById('delForm').submit();}}
+function filterTbl(inp,tid){const q=inp.value.toLowerCase();document.querySelectorAll('#'+tid+' tbody tr').forEach(r=>{r.style.display=(r.dataset.search||'').includes(q)?'':' none';});}
 </script>
-JS;
-
-include_once __DIR__ . '/../includes/layout.php';
-?>
+</body>
+</html>

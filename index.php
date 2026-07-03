@@ -1,195 +1,92 @@
 <?php
-// Copy logo to assets if not done already
-$logoSrc = __DIR__ . '/assets/images/logo.png';
+require_once __DIR__ . '/config/auth.php';
+
+// Redirect based on logged-in role or show selector
+if (isLoggedIn()) {
+    $role = $_SESSION['role'] ?? 'admin';
+    header('Location: /egglandbangladesh/' . $role . '/dashboard.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login — Eggland BD ERP</title>
-  <meta name="description" content="Eggland BD — Premium Egg Distribution ERP System Login">
-  <meta name="theme-color" content="#8B002D">
-  <link rel="manifest" href="/egglandbd/manifest.json">
-  <link rel="icon" href="/egglandbd/assets/images/logo.png">
-  <link rel="apple-touch-icon" href="/egglandbd/assets/images/logo.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="/egglandbd/assets/css/app.css">
-  <style>
-    .login-page { background: var(--bg); }
-    .login-card h2 { font-family: 'Poppins',sans-serif; font-size:26px; font-weight:800; color:var(--text-primary); margin-bottom:6px; }
-    .login-card .sub { color:var(--text-muted); font-size:13.5px; margin-bottom:28px; }
-    .role-tabs { display:flex; gap:8px; margin-bottom:24px; }
-    .role-tab { flex:1; padding:8px; border-radius:var(--radius); border:1.5px solid var(--border); background:white; cursor:pointer; text-align:center; font-size:12px; font-weight:600; color:var(--text-muted); transition:var(--transition); }
-    .role-tab.active { border-color:var(--maroon); background:var(--maroon-50); color:var(--maroon); }
-    .login-footer { margin-top:20px; text-align:center; font-size:12px; color:var(--text-muted); }
-    .floating-egg {
-      position:absolute; font-size:80px; opacity:0.08;
-      animation: floatEgg 6s ease-in-out infinite;
-    }
-    @keyframes floatEgg {
-      0%,100%{ transform:translateY(0) rotate(-10deg); }
-      50%{ transform:translateY(-20px) rotate(10deg); }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eggland Bangladesh — Business Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #8B0032 0%, #5A0020 60%, #2D0010 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; overflow: hidden; position: relative; }
+  body::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 30%, rgba(245,166,35,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(255,255,255,0.04) 0%, transparent 50%); pointer-events: none; }
+  .card { background: rgba(255,255,255,0.97); backdrop-filter: blur(20px); border-radius: 24px; padding: 56px 48px; width: 100%; max-width: 480px; box-shadow: 0 40px 100px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1); text-align: center; position: relative; }
+  .logo { width: 100px; height: 100px; object-fit: contain; margin-bottom: 20px; }
+  .logo-fallback { width: 100px; height: 100px; background: linear-gradient(135deg, #8B0032, #5A0020); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #F5A623; font-size: 40px; font-weight: 900; margin-bottom: 20px; }
+  h1 { font-size: 26px; font-weight: 800; color: #8B0032; margin-bottom: 6px; }
+  .subtitle { color: #6B7280; font-size: 14px; margin-bottom: 40px; }
+  .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #E5E7EB; }
+  .divider span { font-size: 12px; color: #9CA3AF; font-weight: 500; white-space: nowrap; }
+  .login-options { display: flex; flex-direction: column; gap: 14px; }
+  .login-btn { display: flex; align-items: center; gap: 16px; padding: 18px 24px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 15px; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; }
+  .login-btn:hover { transform: translateY(-3px); }
+  .login-btn .icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .login-btn .info { text-align: left; }
+  .login-btn .info .role { font-size: 16px; font-weight: 700; }
+  .login-btn .info .desc { font-size: 12px; font-weight: 400; opacity: 0.8; }
+  .btn-admin { background: linear-gradient(135deg, #8B0032, #A0003A); color: white; box-shadow: 0 8px 24px rgba(139,0,50,0.3); }
+  .btn-admin:hover { box-shadow: 0 12px 32px rgba(139,0,50,0.45); }
+  .btn-admin .icon { background: rgba(255,255,255,0.2); }
+  .btn-supervisor { background: linear-gradient(135deg, #F5A623, #E09010); color: white; box-shadow: 0 8px 24px rgba(245,166,35,0.35); }
+  .btn-supervisor:hover { box-shadow: 0 12px 32px rgba(245,166,35,0.5); }
+  .btn-supervisor .icon { background: rgba(255,255,255,0.2); }
+  .btn-agent { background: #F9FAFB; color: #374151; border-color: #E5E7EB; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .btn-agent:hover { background: #F3F4F6; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+  .btn-agent .icon { background: #F3F4F6; }
+  .footer { margin-top: 32px; font-size: 12px; color: #9CA3AF; }
+  .footer a { color: #8B0032; text-decoration: none; font-weight: 500; }
+</style>
 </head>
 <body>
+<div class="card">
+  <?php if (file_exists(__DIR__ . '/assets/img/logo.png')): ?>
+    <img src="assets/img/logo.png" alt="Logo" class="logo">
+  <?php else: ?>
+    <div class="logo-fallback">🥚</div>
+  <?php endif; ?>
+  <h1>Eggland Bangladesh</h1>
+  <p class="subtitle">Business Management System</p>
 
-<div class="login-page">
-  <!-- Left Brand Panel -->
-  <div class="login-left">
-    <span class="floating-egg" style="top:10%;left:5%">🥚</span>
-    <span class="floating-egg" style="bottom:15%;right:8%;animation-delay:2s;font-size:60px">🥚</span>
-    <span class="floating-egg" style="top:50%;left:15%;animation-delay:4s;font-size:40px">🥚</span>
+  <div class="divider"><span>SELECT YOUR ROLE TO CONTINUE</span></div>
 
-    <div style="position:relative;z-index:1;text-align:center">
-      <img src="/egglandbd/assets/images/logo.png" alt="Eggland BD" class="login-brand-logo">
-      <div class="login-brand-title">Eggland BD</div>
-      <div class="login-brand-sub">Premium Egg Distribution ERP System</div>
-
-      <div class="login-features">
-        <div class="login-feature">
-          <i class="fas fa-chart-line"></i>
-          Complete Sales & Distribution Management
-        </div>
-        <div class="login-feature">
-          <i class="fas fa-map-marked-alt"></i>
-          Live Delivery & Route Tracking
-        </div>
-        <div class="login-feature">
-          <i class="fas fa-boxes"></i>
-          Real-Time Inventory Control
-        </div>
-        <div class="login-feature">
-          <i class="fas fa-wallet"></i>
-          Financial Reporting & Ledger
-        </div>
-        <div class="login-feature">
-          <i class="fas fa-mobile-alt"></i>
-          Mobile PWA — Works Offline
-        </div>
+  <div class="login-options">
+    <a href="login-admin.php" class="login-btn btn-admin">
+      <div class="icon">⚙️</div>
+      <div class="info">
+        <div class="role">Admin Panel</div>
+        <div class="desc">Full system control &amp; reports</div>
       </div>
-    </div>
+    </a>
+    <a href="login-supervisor.php" class="login-btn btn-supervisor">
+      <div class="icon">👩‍💼</div>
+      <div class="info">
+        <div class="role">Supervisor Panel</div>
+        <div class="desc">Manage agents &amp; deliveries</div>
+      </div>
+    </a>
+    <a href="login-agent.php" class="login-btn btn-agent">
+      <div class="icon">📱</div>
+      <div class="info">
+        <div class="role">Agent Panel</div>
+        <div class="desc">Sales, delivery &amp; map operations</div>
+      </div>
+    </a>
   </div>
 
-  <!-- Right Login Panel -->
-  <div class="login-right">
-    <div class="login-card glass-card" style="padding:36px;border-radius:20px">
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="display:inline-flex;width:60px;height:60px;background:var(--maroon-50);border-radius:50%;align-items:center;justify-content:center;margin-bottom:12px">
-          <i class="fas fa-lock" style="color:var(--maroon);font-size:22px"></i>
-        </div>
-        <h2>Welcome Back</h2>
-        <div class="sub">Sign in to your Eggland BD account</div>
-      </div>
-
-      <!-- Role Hint Tabs -->
-      <div class="role-tabs">
-        <div class="role-tab active" onclick="setDemo('admin','Admin@1234',this)"><i class="fas fa-crown"></i> Admin</div>
-        <div class="role-tab" onclick="setDemo('agent1','Admin@1234',this)"><i class="fas fa-user-tie"></i> Agent</div>
-        <div class="role-tab" onclick="setDemo('sr1','Admin@1234',this)"><i class="fas fa-handshake"></i> SR</div>
-        <div class="role-tab" onclick="setDemo('dsr1','Admin@1234',this)"><i class="fas fa-truck"></i> DSR</div>
-      </div>
-
-      <form id="loginForm" onsubmit="doLogin(event)">
-        <div class="form-group">
-          <label class="form-label"><i class="fas fa-user" style="color:var(--maroon);margin-right:5px"></i>Username</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-user"></i></span>
-            <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" value="admin" required autocomplete="username">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label"><i class="fas fa-lock" style="color:var(--maroon);margin-right:5px"></i>Password</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-            <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" value="Admin@1234" required autocomplete="current-password">
-            <span class="input-group-text" style="cursor:pointer;border-left:1px solid var(--border)" onclick="togglePass()"><i class="fas fa-eye" id="eyeIcon"></i></span>
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
-            <input type="checkbox" style="accent-color:var(--maroon)"> Remember me
-          </label>
-          <a href="#" style="font-size:12px;color:var(--maroon);text-decoration:none">Forgot password?</a>
-        </div>
-
-        <div id="loginError" class="alert alert-danger" style="display:none"></div>
-
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
-          <i class="fas fa-sign-in-alt"></i> Sign In
-        </button>
-      </form>
-
-      <div class="login-footer">
-        <i class="fas fa-shield-alt" style="color:var(--maroon)"></i>
-        Secured with JWT Authentication &bull; Eggland BD v1.0
-      </div>
-    </div>
+  <div class="footer">
+    First time? <a href="install.php">Run installer</a> to set up the database.
   </div>
 </div>
-
-<div id="toastContainer" class="toast-container"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
-<script src="/egglandbd/assets/js/app.js"></script>
-<script>
-  // Prevent redirect to login (we ARE on login)
-  App.init = function() {
-    this.token = localStorage.getItem('eg_token');
-    const userData = localStorage.getItem('eg_user');
-    if (userData) this.user = JSON.parse(userData);
-    if (this.token) redirectByRole(JSON.parse(localStorage.getItem('eg_user')));
-    this._initToastContainer();
-  };
-  App.init();
-
-  function redirectByRole(user) {
-    if (!user) return;
-    const routes = { admin: '/egglandbd/admin/index.php', agent: '/egglandbd/agent/index.php', sr: '/egglandbd/sr/index.php', dsr: '/egglandbd/dsr/index.php' };
-    window.location.href = routes[user.role] || '/egglandbd/admin/index.php';
-  }
-
-  function setDemo(username, password, tab) {
-    document.getElementById('username').value = username;
-    document.getElementById('password').value = password;
-    document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-  }
-
-  function togglePass() {
-    const inp = document.getElementById('password');
-    const icon = document.getElementById('eyeIcon');
-    if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
-    else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
-  }
-
-  async function doLogin(e) {
-    e.preventDefault();
-    const btn = document.getElementById('loginBtn');
-    const errEl = document.getElementById('loginError');
-    errEl.style.display = 'none';
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Signing in...';
-
-    const resp = await App.login(
-      document.getElementById('username').value.trim(),
-      document.getElementById('password').value
-    );
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-
-    if (resp?.success) {
-      App.toast('success', 'Login Successful', `Welcome back, ${resp.data.user.name}!`);
-      setTimeout(() => redirectByRole(resp.data.user), 800);
-    } else {
-      errEl.textContent = resp?.message || 'Invalid credentials. Please try again.';
-      errEl.style.display = 'flex';
-    }
-  }
-</script>
 </body>
 </html>
