@@ -40,8 +40,15 @@ function getDB() {
                 ]
             );
         } catch (PDOException $e) {
+            global $is_local;
             if (!defined('INSTALL_PAGE')) {
-                header('Location: /egglandbangladesh/install.php');
+                if (isset($is_local) && $is_local) {
+                    header('Location: /egglandbangladesh/install.php');
+                } else {
+                    // For live server, redirect to root install.php
+                    // Or if it fails, just show the error so the user can debug
+                    die("Database connection failed on live server. Please check your credentials. Error: " . $e->getMessage());
+                }
                 exit;
             }
             return null;
