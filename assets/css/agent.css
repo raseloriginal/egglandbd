@@ -1080,3 +1080,8 @@ body.agent-body {
 .fab:active {
   transform: scale(0.95);
 }
+
+/* Remove all border-radius globally */
+* {
+  border-radius: 0px !important;
+}

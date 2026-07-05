@@ -475,3 +475,8 @@ h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); }
   .main-content { margin-left: 0 !important; }
   .page-content { padding: 0 !important; }
 }
+
+/* Remove all border-radius globally */
+* {
+  border-radius: 0px !important;
+}
