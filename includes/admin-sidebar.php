@@ -68,6 +68,9 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'A', 0, 1));
       <a href="<?= BASE_URL ?>/admin/settings.php" class="nav-item <?= $currentPage === 'settings' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-cogs"></i></span> Settings
       </a>
+      <a href="<?= BASE_URL ?>/admin/migrate.php" class="nav-item <?= $currentPage === 'migrate' ? 'active' : '' ?>">
+        <span class="nav-icon"><i class="fas fa-database"></i></span> DB Migrations
+      </a>
     </div>
   </nav>
 
