@@ -51,17 +51,18 @@ body::after { content: ''; position: absolute; top: -100px; right: -100px; width
 .back-link { text-align: center; margin-top: 16px; font-size: 13px; color: #9B8B82; }
 .back-link a { color: #D4850A; font-weight: 600; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
 <div class="login-card">
   <div class="lc-top">
-    <div class="logo-ring">👩‍💼</div>
+    <div class="logo-ring"><i class="fas fa-user-tie"></i></div>
     <h1>Supervisor Portal</h1>
     <p>Eggland Bangladesh — Agent Management</p>
   </div>
   <div class="lc-body">
     <?php if ($error): ?>
-      <div class="error-msg">❌ <?= htmlspecialchars($error) ?></div>
+      <div class="error-msg"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     <form method="POST">
       <div class="form-group">
@@ -72,13 +73,13 @@ body::after { content: ''; position: absolute; top: -100px; right: -100px; width
         <label class="form-label">Password</label>
         <div class="pw-wrap">
           <input type="password" id="pw" name="password" class="form-control" placeholder="Password" required>
-          <button type="button" class="pw-toggle" onclick="document.getElementById('pw').type=document.getElementById('pw').type==='password'?'text':'password'">👁</button>
+          <button type="button" class="pw-toggle" onclick="document.getElementById('pw').type=document.getElementById('pw').type==='password'?'text':'password'"><i class="fas fa-eye"></i></button>
         </div>
       </div>
-      <button type="submit" class="btn-login">Sign In →</button>
+      <button type="submit" class="btn-login">Sign In <i class="fas fa-arrow-right"></i></button>
     </form>
     <div class="demo-hint">Demo: <strong>supervisor1</strong> / <strong>super123</strong></div>
-    <div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Back to role selection</a></div>
+    <div class="back-link"><a href="<?= BASE_URL ?>/index.php"><i class="fas fa-arrow-left"></i> Back to role selection</a></div>
   </div>
 </div>
 </body>

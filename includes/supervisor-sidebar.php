@@ -8,7 +8,7 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'S', 0, 1));
     <?php if (file_exists(dirname(__DIR__) . '/assets/img/logo.png')): ?>
       <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="Logo" style="width:34px;height:34px;object-fit:contain;border-radius:6px;">
     <?php else: ?>
-      <div class="sidebar-logo-icon" style="background:#F5A623;color:#8B0032;">🥚</div>
+      <div class="sidebar-logo-icon" style="background:#F5A623;color:#8B0032;"><i class="fas fa-egg"></i></div>
     <?php endif; ?>
     <div class="sidebar-logo-text">
       <div class="name">Eggland BD</div>
@@ -38,7 +38,7 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'S', 0, 1));
         <span class="nav-icon"><i class="fas fa-shopping-cart"></i></span> Sales <span class="nav-badge">Soon</span>
       </a>
       <a href="<?= BASE_URL ?>/supervisor/demand.php" class="nav-item <?= $currentPage === 'demand' ? 'active' : '' ?>">
-        <span class="nav-icon"><i class="fas fa-file-invoice-dollar"></i></span> Demand <span class="nav-badge">Soon</span>
+        <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span> Demands
       </a>
       <a href="<?= BASE_URL ?>/supervisor/inventory.php" class="nav-item <?= $currentPage === 'inventory' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-warehouse"></i></span> Inventory <span class="nav-badge">Soon</span>
@@ -53,7 +53,7 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'S', 0, 1));
         <div class="uname"><?= htmlspecialchars($u['full_name'] ?? 'Supervisor') ?></div>
         <div class="urole">Supervisor</div>
       </div>
-      <a href="<?= BASE_URL ?>/logout.php" class="logout-btn" title="Logout">⏻</a>
+      <a href="<?= BASE_URL ?>/logout.php" class="logout-btn" title="Logout"><i class="fas fa-power-off"></i></a>
     </div>
   </div>
 </aside>

@@ -6,8 +6,15 @@ SET FOREIGN_KEY_CHECKS = 0;
 SET NAMES utf8mb4;
 
 -- Drop tables if they exist (for fresh install)
-DROP TABLE IF EXISTS `lot_items`;
-DROP TABLE IF EXISTS `ledger`;
+DROP TABLE IF EXISTS `areas`;
+DROP TABLE IF EXISTS `areas`;
+DROP TABLE IF EXISTS `areas`;
+DROP TABLE IF EXISTS `areas`;
+DROP TABLE IF EXISTS `dispatch_demands`;
+DROP TABLE IF EXISTS `dispatches`;
+DROP TABLE IF EXISTS `dsrs`;
+DROP TABLE IF EXISTS `product_price_history`;
+DROP TABLE IF EXISTS `warehouse_lots`;
 DROP TABLE IF EXISTS `delivery_items`;
 DROP TABLE IF EXISTS `deliveries`;
 DROP TABLE IF EXISTS `order_items`;
@@ -57,6 +64,74 @@ CREATE TABLE `agents` (
   FOREIGN KEY (`supervisor_id`) REFERENCES `supervisors`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Areas
+CREATE TABLE `areas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- DSRs (Delivery Sales Representatives)
+CREATE TABLE `dsrs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20),
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Areas
+CREATE TABLE `areas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- DSRs (Delivery Sales Representatives)
+CREATE TABLE `dsrs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20),
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Areas
+CREATE TABLE `areas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- DSRs (Delivery Sales Representatives)
+CREATE TABLE `dsrs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20),
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Areas
+CREATE TABLE `areas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- DSRs (Delivery Sales Representatives)
+CREATE TABLE `dsrs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(20),
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Retailers
 CREATE TABLE `retailers` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -71,11 +146,21 @@ CREATE TABLE `retailers` (
   FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Providers
+CREATE TABLE `providers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `type` ENUM('company','farm') DEFAULT 'company',
+  `status` ENUM('active','inactive') DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Products
 CREATE TABLE `products` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL,
   `unit_type` ENUM('case','kg','dozen','piece','bag','crate') NOT NULL DEFAULT 'case',
+  `buying_price` DECIMAL(10,2) DEFAULT 0.00,
   `price` DECIMAL(10,2) DEFAULT 0.00,
   `status` ENUM('active','inactive') DEFAULT 'active',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -166,6 +251,338 @@ CREATE TABLE `inventory` (
   `qty_available` DECIMAL(10,2) DEFAULT 0.00,
   `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Warehouse Lots (Incoming Inventory)
+CREATE TABLE `warehouse_lots` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `provider_id` INT NOT NULL,
+  `product_id` INT NOT NULL,
+  `qty` DECIMAL(10,2) NOT NULL,
+  `buying_price` DECIMAL(10,2) NOT NULL,
+  `selling_price` DECIMAL(10,2) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product Price History
+CREATE TABLE `product_price_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT NOT NULL,
+  `warehouse_lot_id` INT NULL,
+  `old_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `old_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `source` ENUM('lot_addition','product_edit') NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Warehouse Lots (Incoming Inventory)
+CREATE TABLE `warehouse_lots` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `provider_id` INT NOT NULL,
+  `product_id` INT NOT NULL,
+  `qty` DECIMAL(10,2) NOT NULL,
+  `buying_price` DECIMAL(10,2) NOT NULL,
+  `selling_price` DECIMAL(10,2) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product Price History
+CREATE TABLE `product_price_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT NOT NULL,
+  `warehouse_lot_id` INT NULL,
+  `old_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `old_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `source` ENUM('lot_addition','product_edit') NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Warehouse Lots (Incoming Inventory)
+CREATE TABLE `warehouse_lots` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `provider_id` INT NOT NULL,
+  `product_id` INT NOT NULL,
+  `qty` DECIMAL(10,2) NOT NULL,
+  `buying_price` DECIMAL(10,2) NOT NULL,
+  `selling_price` DECIMAL(10,2) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product Price History
+CREATE TABLE `product_price_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT NOT NULL,
+  `warehouse_lot_id` INT NULL,
+  `old_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `old_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `source` ENUM('lot_addition','product_edit') NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Warehouse Lots (Incoming Inventory)
+CREATE TABLE `warehouse_lots` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `provider_id` INT NOT NULL,
+  `product_id` INT NOT NULL,
+  `qty` DECIMAL(10,2) NOT NULL,
+  `buying_price` DECIMAL(10,2) NOT NULL,
+  `selling_price` DECIMAL(10,2) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`provider_id`) REFERENCES `providers`(`id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product Price History
+CREATE TABLE `product_price_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT NOT NULL,
+  `warehouse_lot_id` INT NULL,
+  `old_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_buying_price` DECIMAL(10,2) DEFAULT 0.00,
+  `old_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `new_selling_price` DECIMAL(10,2) DEFAULT 0.00,
+  `source` ENUM('lot_addition','product_edit') NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatches (Out of Delivery)
+CREATE TABLE `dispatches` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `dsr_id` INT NOT NULL,
+  `destination_type` ENUM('hub','direct') NOT NULL,
+  `warehouse_lot_id` INT NOT NULL,
+  `qty_dispatched` DECIMAL(10,2) NOT NULL,
+  `status` ENUM('dispatched','delivered','cancelled') DEFAULT 'dispatched',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`dsr_id`) REFERENCES `dsrs`(`id`),
+  FOREIGN KEY (`warehouse_lot_id`) REFERENCES `warehouse_lots`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dispatch Demands (Linking Demands to Dispatches)
+CREATE TABLE `dispatch_demands` (
+  `dispatch_id` INT NOT NULL,
+  `demand_id` INT NOT NULL,
+  PRIMARY KEY (`dispatch_id`, `demand_id`),
+  FOREIGN KEY (`dispatch_id`) REFERENCES `dispatches`(`id`) ON DELETE CASCADE
+  -- FOREIGN KEY (`demand_id`) REFERENCES `demands`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- System Settings

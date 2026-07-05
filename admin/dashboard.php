@@ -59,25 +59,25 @@ $recentLedger = $pdo->query("
           <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
           <div class="stat-label">Supervisors</div>
           <div class="stat-value"><?= $totalSupervisors ?></div>
-          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/supervisors.php" style="color:var(--primary);">Manage →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/supervisors.php" style="color:var(--primary);">Manage <i class="fas fa-arrow-right"></i></a></div>
         </div>
         <div class="stat-card gold">
           <div class="stat-icon"><i class="fas fa-users"></i></div>
           <div class="stat-label">Agents</div>
           <div class="stat-value"><?= $totalAgents ?></div>
-          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/agents.php" style="color:var(--gold-dark);">View all →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/agents.php" style="color:var(--gold-dark);">View all <i class="fas fa-arrow-right"></i></a></div>
         </div>
         <div class="stat-card info">
           <div class="stat-icon"><i class="fas fa-warehouse"></i></div>
           <div class="stat-label">Retailers</div>
           <div class="stat-value"><?= $totalRetailers ?></div>
-          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/retailers.php" style="color:var(--info);">View map →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/retailers.php" style="color:var(--info);">View map <i class="fas fa-arrow-right"></i></a></div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon"><i class="fas fa-box"></i></div>
           <div class="stat-label">Products</div>
           <div class="stat-value"><?= $totalProducts ?></div>
-          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/products.php" style="color:var(--success);">Manage →</a></div>
+          <div class="stat-sub"><a href="<?= BASE_URL ?>/admin/products.php" style="color:var(--success);">Manage <i class="fas fa-arrow-right"></i></a></div>
         </div>
         <div class="stat-card success">
           <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>

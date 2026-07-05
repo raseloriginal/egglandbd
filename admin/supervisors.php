@@ -62,14 +62,14 @@ $supervisors = $pdo->query("
     <div class="top-header">
       <div><div class="header-title">Supervisors</div><div class="header-subtitle">Manage supervisors and their areas</div></div>
       <div class="header-spacer"></div>
-      <button class="btn btn-primary" onclick="openModal('modalAdd')">➕ Add Supervisor</button>
+      <button class="btn btn-primary" onclick="openModal('modalAdd')"><i class="fas fa-plus"></i> Add Supervisor</button>
     </div>
     <div class="page-content">
-      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
-      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+      <?php if ($success): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
       <div class="table-wrapper">
         <div class="table-toolbar">
-          <div class="toolbar-title">👩‍💼 Supervisors (<?= count($supervisors) ?>)</div>
+          <div class="toolbar-title"><i class="fas fa-user-tie"></i> Supervisors (<?= count($supervisors) ?>)</div>
           <div class="spacer"></div>
           <div class="search-input-wrap"><input type="text" class="search-input" placeholder="Search..." oninput="filterTbl(this,'supTbl')"></div>
         </div>
@@ -77,7 +77,7 @@ $supervisors = $pdo->query("
         <table class="tbl" id="supTbl">
           <thead><tr><th>#</th><th>Name</th><th>Username</th><th>Phone</th><th>Area</th><th>Agents</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody>
-            <?php if (empty($supervisors)): ?><tr><td colspan="9"><div class="table-empty"><div class="empty-icon">👩‍💼</div><p>No supervisors yet.</p></div></td></tr>
+            <?php if (empty($supervisors)): ?><tr><td colspan="9"><div class="table-empty"><div class="empty-icon"><i class="fas fa-user-tie"></i></div><p>No supervisors yet.</p></div></td></tr>
             <?php else: foreach ($supervisors as $i=>$s): ?>
             <tr data-search="<?= strtolower($s['full_name'].' '.$s['username'].' '.$s['area']) ?>">
               <td class="text-muted fs-12"><?= $i+1 ?></td>
@@ -89,8 +89,8 @@ $supervisors = $pdo->query("
               <td><span class="badge <?= $s['status']==='active'?'badge-success':'badge-danger' ?>"><?= $s['status'] ?></span></td>
               <td class="text-muted fs-12"><?= date('d M Y', strtotime($s['created_at'])) ?></td>
               <td><div style="display:flex;gap:6px;">
-                <button class="btn btn-ghost btn-sm" onclick='openEdit(<?= json_encode($s, JSON_HEX_APOS) ?>)'>✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="delSup(<?= $s['user_id'] ?>,'<?= addslashes($s['full_name']) ?>')">🗑️</button>
+                <button class="btn btn-ghost btn-sm" onclick='openEdit(<?= json_encode($s, JSON_HEX_APOS) ?>)'><i class="fas fa-edit"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="delSup(<?= $s['user_id'] ?>,'<?= addslashes($s['full_name']) ?>')"><i class="fas fa-trash-alt"></i></button>
               </div></td>
             </tr>
             <?php endforeach; endif; ?>
@@ -104,7 +104,7 @@ $supervisors = $pdo->query("
 
 <!-- Add Modal -->
 <div class="modal-overlay" id="modalAdd" onclick="closeModalOuter(event,'modalAdd')">
-  <div class="modal"><div class="modal-header"><div class="modal-title">➕ Add Supervisor</div><button class="modal-close" onclick="closeModal('modalAdd')">✕</button></div>
+  <div class="modal"><div class="modal-header"><div class="modal-title"><i class="fas fa-plus"></i> Add Supervisor</div><button class="modal-close" onclick="closeModal('modalAdd')"><i class="fas fa-times"></i></button></div>
   <form method="POST"><input type="hidden" name="action" value="add">
   <div class="modal-body">
     <div class="form-row">
@@ -117,13 +117,13 @@ $supervisors = $pdo->query("
     </div>
     <div class="form-group"><label class="form-label">Password *</label><input type="password" name="password" class="form-control" required></div>
   </div>
-  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary">➕ Create</button></div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button></div>
   </form></div>
 </div>
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="modalEdit" onclick="closeModalOuter(event,'modalEdit')">
-  <div class="modal"><div class="modal-header"><div class="modal-title">✏️ Edit Supervisor</div><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
+  <div class="modal"><div class="modal-header"><div class="modal-title"><i class="fas fa-edit"></i> Edit Supervisor</div><button class="modal-close" onclick="closeModal('modalEdit')"><i class="fas fa-times"></i></button></div>
   <form method="POST"><input type="hidden" name="action" value="edit"><input type="hidden" name="user_id" id="eUid"><input type="hidden" name="sup_id" id="eSupId">
   <div class="modal-body">
     <div class="form-row">
@@ -136,7 +136,7 @@ $supervisors = $pdo->query("
     </div>
     <div class="form-group"><label class="form-label">New Password <span class="text-muted">(blank = no change)</span></label><input type="password" name="password" class="form-control"></div>
   </div>
-  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary">💾 Save</button></div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button></div>
   </form></div>
 </div>
 <form method="POST" id="delForm" style="display:none;"><input type="hidden" name="action" value="delete"><input type="hidden" name="user_id" id="delUid"></form>

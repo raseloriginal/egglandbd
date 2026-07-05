@@ -109,7 +109,7 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="hdr-sub">Agent Panel</div>
     </div>
     <div class="hdr-notif"><i class="fas fa-bell"></i></div>
-    <div class="hdr-avatar" onclick="window.location='/egglandbangladesh/logout.php'"><?= strtoupper(substr($u['full_name'] ?? 'A', 0, 1)) ?></div>
+    <div class="hdr-avatar" onclick="window.location='/egglandbd/logout.php'"><?= strtoupper(substr($u['full_name'] ?? 'A', 0, 1)) ?></div>
   </div>
 </header>
 
@@ -202,7 +202,7 @@ $currency = getSetting('currency_symbol', '৳');
     <!-- Chart -->
     <div class="chart-section">
       <div class="cs-header">
-        <div class="cs-title">📊 Sales (Last 7 Days)</div>
+        <div class="cs-title"><i class="fas fa-chart-bar"></i> Sales (Last 7 Days)</div>
         <div class="chart-filter">
           <button class="chart-filter-btn active" onclick="filterChart(7, this)">7D</button>
           <button class="chart-filter-btn" onclick="filterChart(30, this)">30D</button>
@@ -213,7 +213,7 @@ $currency = getSetting('currency_symbol', '৳');
 
     <!-- Recent Activity -->
     <div class="activity-section">
-      <div style="font-size:13px;font-weight:700;color:#1A0A05;margin-bottom:14px;">⚡ Recent Activity</div>
+      <div style="font-size:13px;font-weight:700;color:#1A0A05;margin-bottom:14px;"><i class="fas fa-bolt"></i> Recent Activity</div>
       <?php if (empty($recentActivity)): ?>
         <div style="text-align:center;padding:20px;color:#9B8B82;font-size:13px;">No recent activity</div>
       <?php else: ?>

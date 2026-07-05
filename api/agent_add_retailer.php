@@ -1,9 +1,9 @@
 <?php
-session_start();
-require_once '../config/database.php';
-require_once '../config/auth.php';
+require_once dirname(__DIR__) . '/config/db.php';
+require_once dirname(__DIR__) . '/config/auth.php';
 
-checkAuth('agent');
+requireRole('agent');
+$pdo = getDB();
 
 header('Content-Type: application/json');
 
@@ -12,14 +12,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$agent_id = $_SESSION['user_id'];
+$agent_id = $_SESSION['agent_id'] ?? 0;
 $name = trim($_POST['name'] ?? '');
-$shop_name = trim($_POST['shop_name'] ?? '');
 $phone = trim($_POST['phone'] ?? '');
-$latitude = $_POST['latitude'] ?? null;
-$longitude = $_POST['longitude'] ?? null;
+$lat = $_POST['latitude'] ?? null;
+$lng = $_POST['longitude'] ?? null;
 
-if (empty($name) || empty($phone) || empty($latitude) || empty($longitude)) {
+if (!$agent_id) {
+    echo json_encode(['success' => false, 'message' => 'Agent session not found.']);
+    exit;
+}
+
+if (empty($name) || empty($phone) || empty($lat) || empty($lng)) {
     echo json_encode(['success' => false, 'message' => 'Name, phone, and location are required.']);
     exit;
 }
@@ -52,8 +56,8 @@ if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
 }
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO retailers (name, shop_name, phone, image_path, latitude, longitude, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-    $stmt->execute([$name, $shop_name, $phone, $image_path, $latitude, $longitude, $agent_id]);
+    $stmt = $pdo->prepare("INSERT INTO retailers (agent_id, name, phone, lat, lng, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    $stmt->execute([$agent_id, $name, $phone, $lat, $lng]);
     
     $retailer_id = $pdo->lastInsertId();
     
@@ -63,11 +67,11 @@ try {
         'retailer' => [
             'id' => $retailer_id,
             'name' => $name,
-            'shop_name' => $shop_name,
             'phone' => $phone,
-            'image_path' => $image_path,
-            'latitude' => $latitude,
-            'longitude' => $longitude
+            'lat' => $lat,
+            'lng' => $lng,
+            'has_order' => 0,
+            'has_delivery' => 0
         ]
     ]);
 } catch (PDOException $e) {

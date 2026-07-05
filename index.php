@@ -47,13 +47,14 @@ if (isLoggedIn()) {
   .footer { margin-top: 32px; font-size: 12px; color: #9CA3AF; }
   .footer a { color: #8B0032; text-decoration: none; font-weight: 500; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
 <div class="card">
   <?php if (file_exists(__DIR__ . '/assets/img/logo.png')): ?>
     <img src="assets/img/logo.png" alt="Logo" class="logo">
   <?php else: ?>
-    <div class="logo-fallback">🥚</div>
+    <div class="logo-fallback"><i class="fas fa-egg"></i></div>
   <?php endif; ?>
   <h1>Eggland Bangladesh</h1>
   <p class="subtitle">Business Management System</p>
@@ -62,21 +63,21 @@ if (isLoggedIn()) {
 
   <div class="login-options">
     <a href="login-admin.php" class="login-btn btn-admin">
-      <div class="icon">⚙️</div>
+      <div class="icon"><i class="fas fa-cogs"></i></div>
       <div class="info">
         <div class="role">Admin Panel</div>
         <div class="desc">Full system control &amp; reports</div>
       </div>
     </a>
     <a href="login-supervisor.php" class="login-btn btn-supervisor">
-      <div class="icon">👩‍💼</div>
+      <div class="icon"><i class="fas fa-user-tie"></i></div>
       <div class="info">
         <div class="role">Supervisor Panel</div>
         <div class="desc">Manage agents &amp; deliveries</div>
       </div>
     </a>
     <a href="login-agent.php" class="login-btn btn-agent">
-      <div class="icon">📱</div>
+      <div class="icon"><i class="fas fa-mobile-alt"></i></div>
       <div class="info">
         <div class="role">Agent Panel</div>
         <div class="desc">Sales, delivery &amp; map operations</div>

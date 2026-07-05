@@ -65,6 +65,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    // Confirm Hub Delivery
+    if ($action === 'confirm_hub') {
+        $dispatch_id = (int)($_POST['dispatch_id'] ?? 0);
+        if ($dispatch_id) {
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT d.* FROM dispatches d
+                    WHERE d.id = ? AND d.status = 'dispatched' AND d.destination_type = 'hub'
+                    AND EXISTS (
+                        SELECT 1 FROM dispatch_demands dd 
+                        JOIN demands dem ON dem.id = dd.demand_id 
+                        WHERE dd.dispatch_id = d.id AND dem.supervisor_id = ?
+                    )
+                ");
+                $stmt->execute([$dispatch_id, $supId]);
+                $dispatch = $stmt->fetch();
+                
+                if ($dispatch) {
+                    $pdo->prepare("UPDATE dispatches SET status = 'delivered' WHERE id = ?")->execute([$dispatch_id]);
+                    
+                    $stmt_dem = $pdo->prepare("
+                        SELECT dem.id, dem.agent_id, dem.total_amount 
+                        FROM dispatch_demands dd
+                        JOIN demands dem ON dem.id = dd.demand_id
+                        WHERE dd.dispatch_id = ?
+                    ");
+                    $stmt_dem->execute([$dispatch_id]);
+                    $demands = $stmt_dem->fetchAll();
+                    
+                    foreach ($demands as $dem) {
+                        $pdo->prepare("INSERT INTO ledger (agent_id, supervisor_id, type, amount, note) VALUES (?, ?, 'lot_delivery', ?, ?)")
+                            ->execute([$dem['agent_id'], $supId, $dem['total_amount'], "Auto-generated from Hub Dispatch #$dispatch_id (Demand #{$dem['id']})"]);
+                        $ledger_id = $pdo->lastInsertId();
+                        
+                        $stmt_items = $pdo->prepare("SELECT product_id, qty, price FROM demand_items WHERE demand_id = ?");
+                        $stmt_items->execute([$dem['id']]);
+                        $items = $stmt_items->fetchAll();
+                        
+                        foreach ($items as $item) {
+                            $pdo->prepare("INSERT INTO lot_items (ledger_id, product_id, qty, price) VALUES (?, ?, ?, ?)")
+                                ->execute([$ledger_id, $item['product_id'], $item['qty'], $item['price']]);
+                        }
+                    }
+                    $pdo->commit();
+                    $success = "Hub Dispatch #$dispatch_id confirmed and lot deliveries created.";
+                } else {
+                    $pdo->rollBack();
+                    $error = "Invalid or already confirmed hub dispatch.";
+                }
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Error confirming hub dispatch: ' . $e->getMessage();
+            }
+        }
+    }
 }
 
 // Fetch agents under this supervisor
@@ -107,6 +164,27 @@ if ($supId) {
     $ledgerRows = $stmt->fetchAll();
 }
 
+// Fetch Pending Hub Deliveries
+$pendingHubDispatches = [];
+if ($supId) {
+    $stmt = $pdo->prepare("
+        SELECT d.*, dsr.name as dsr_name, w.qty as lot_qty, p.name as product_name
+        FROM dispatches d
+        JOIN dsrs dsr ON dsr.id = d.dsr_id
+        JOIN warehouse_lots w ON w.id = d.warehouse_lot_id
+        JOIN products p ON p.id = w.product_id
+        WHERE d.destination_type = 'hub' AND d.status = 'dispatched'
+        AND EXISTS (
+            SELECT 1 FROM dispatch_demands dd 
+            JOIN demands dem ON dem.id = dd.demand_id 
+            WHERE dd.dispatch_id = d.id AND dem.supervisor_id = ?
+        )
+        ORDER BY d.created_at ASC
+    ");
+    $stmt->execute([$supId]);
+    $pendingHubDispatches = $stmt->fetchAll();
+}
+
 $currency = getSetting('currency_symbol', '৳');
 // Selected agent filter
 $filterAgent = (int)($_GET['agent_id'] ?? 0);
@@ -132,12 +210,50 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
       </div>
       <div class="header-spacer"></div>
       <button class="btn btn-gold" onclick="openModal('modalDeposit')"><i class="fas fa-hand-holding-usd"></i> Add Deposit</button>
-      <button class="btn btn-primary" onclick="openModal('modalLot')"><i class="fas fa-boxes"></i> Add Lot Delivery</button>
     </div>
     <div class="page-content">
 
       <?php if ($success): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
       <?php if ($error): ?><div class="alert alert-danger"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
+
+      <!-- Pending Hub Deliveries -->
+      <?php if (!empty($pendingHubDispatches)): ?>
+      <div class="section-header">
+        <div class="section-title"><i class="fas fa-truck-loading"></i> Pending Hub Deliveries</div>
+      </div>
+      <div class="table-wrapper mb-24">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>#ID</th>
+              <th>DSR</th>
+              <th>Product (Lot)</th>
+              <th class="text-right">Qty</th>
+              <th>Date</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($pendingHubDispatches as $phd): ?>
+            <tr>
+              <td class="text-muted fs-12">#<?= $phd['id'] ?></td>
+              <td class="fw-700"><?= htmlspecialchars($phd['dsr_name']) ?></td>
+              <td><?= htmlspecialchars($phd['product_name']) ?> (Lot #<?= $phd['warehouse_lot_id'] ?>)</td>
+              <td class="text-right fw-700 text-primary-color"><?= number_format($phd['qty_dispatched'], 0) ?></td>
+              <td class="text-muted fs-12"><?= date('d M Y, h:i A', strtotime($phd['created_at'])) ?></td>
+              <td class="text-right">
+                <form method="POST" onsubmit="return confirm('Confirm receipt of this hub delivery? This will auto-generate lot deliveries for the agents.');">
+                  <input type="hidden" name="action" value="confirm_hub">
+                  <input type="hidden" name="dispatch_id" value="<?= $phd['id'] ?>">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check-circle"></i> Confirm Receipt & Deliver</button>
+                </form>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <?php endif; ?>
 
       <!-- Agent Balance Cards -->
       <div class="section-header">
@@ -152,7 +268,7 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
           <div class="stat-label"><?= htmlspecialchars($ag['full_name']) ?></div>
           <div class="stat-value" style="font-size:20px;"><?= $currency ?><?= number_format(abs($balance), 2) ?></div>
           <div class="stat-sub" style="color:<?= $balance >= 0 ? 'var(--success)' : 'var(--danger)' ?>;">
-            <?= $balance >= 0 ? '↑ Surplus' : '↓ Balance Due' ?>
+            <?= $balance >= 0 ? '<i class="fas fa-arrow-up"></i> Surplus' : '<i class="fas fa-arrow-down"></i> Balance Due' ?>
           </div>
           <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">
             Deposits: <?= $currency ?><?= number_format($ag['total_deposit'], 0) ?> &nbsp;|&nbsp;
@@ -283,7 +399,7 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title"><i class="fas fa-hand-holding-usd"></i> Add Deposit</div>
-      <button class="modal-close" onclick="closeModal('modalDeposit')">✕</button>
+      <button class="modal-close" onclick="closeModal('modalDeposit')"><i class="fas fa-times"></i></button>
     </div>
     <form method="POST">
       <input type="hidden" name="action" value="add_deposit">
@@ -322,7 +438,7 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
   <div class="modal" style="max-width:620px;">
     <div class="modal-header">
       <div class="modal-title"><i class="fas fa-boxes"></i> Add Lot Delivery</div>
-      <button class="modal-close" onclick="closeModal('modalLot')">✕</button>
+      <button class="modal-close" onclick="closeModal('modalLot')"><i class="fas fa-times"></i></button>
     </div>
     <form method="POST">
       <input type="hidden" name="action" value="add_lot">
@@ -349,7 +465,7 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
               </select>
               <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" oninput="calcLotTotal()">
               <input type="number" name="price[]" class="form-control" placeholder="Price/unit" min="0.01" step="0.01" oninput="calcLotTotal()">
-              <button type="button" class="btn-danger-xs" onclick="removeRow(this)">✕</button>
+              <button type="button" class="btn-danger-xs" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
             </div>
           </div>
           <button type="button" class="btn btn-ghost btn-sm mt-16" onclick="addLotRow()"><i class="fas fa-plus"></i> Add Product</button>
@@ -392,7 +508,7 @@ function addLotRow() {
     </select>
     <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" oninput="calcLotTotal()">
     <input type="number" name="price[]" class="form-control" placeholder="Price" min="0.01" step="0.01" oninput="calcLotTotal()">
-    <button type="button" class="btn-danger-xs" onclick="removeRow(this)">✕</button>`;
+    <button type="button" class="btn-danger-xs" onclick="removeRow(this)"><i class="fas fa-times"></i></button>`;
   container.appendChild(row);
 }
 

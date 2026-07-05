@@ -9,7 +9,7 @@ if (isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], $whiteli
 }
 
 if ($is_local) {
-    define('BASE_URL', '/egglandbangladesh');
+    define('BASE_URL', '/egglandbd');
     // Localhost configuration
 
     define('DB_HOST', 'localhost');

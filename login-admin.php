@@ -67,11 +67,12 @@ body { font-family: 'Inter', sans-serif; background: #0D0008; min-height: 100vh;
 .demo-hint { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #92400E; margin-top: 20px; text-align: center; }
 .demo-hint strong { font-weight: 700; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
 <div class="login-left">
   <div class="ll-logo">
-    <div class="ll-logo-icon">🥚</div>
+    <div class="ll-logo-icon"><i class="fas fa-egg"></i></div>
     <div class="ll-logo-text">
       <div class="biz-name">Eggland Bangladesh</div>
       <div class="biz-sub">Business Management System</div>
@@ -89,12 +90,12 @@ body { font-family: 'Inter', sans-serif; background: #0D0008; min-height: 100vh;
 
 <div class="login-right">
   <div class="login-card">
-    <div class="lc-badge">⚙️ Admin Portal</div>
+    <div class="lc-badge"><i class="fas fa-cogs"></i> Admin Portal</div>
     <h1 class="lc-title">Welcome Back</h1>
     <p class="lc-sub">Sign in to access the admin panel.</p>
 
     <?php if ($error): ?>
-      <div class="error-msg">❌ <?= htmlspecialchars($error) ?></div>
+      <div class="error-msg"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="POST" autocomplete="off">
@@ -106,15 +107,15 @@ body { font-family: 'Inter', sans-serif; background: #0D0008; min-height: 100vh;
         <label class="form-label" for="password">Password</label>
         <div class="pw-wrap">
           <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
-          <button type="button" class="pw-toggle" onclick="togglePw()" id="pwToggle">👁</button>
+          <button type="button" class="pw-toggle" onclick="togglePw()" id="pwToggle"><i class="fas fa-eye"></i></button>
         </div>
       </div>
-      <button type="submit" class="btn-login">Sign In to Admin Panel →</button>
+      <button type="submit" class="btn-login">Sign In to Admin Panel <i class="fas fa-arrow-right"></i></button>
     </form>
 
     <div class="demo-hint">Demo: <strong>admin</strong> / <strong>password</strong></div>
 
-    <div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Back to role selection</a></div>
+    <div class="back-link"><a href="<?= BASE_URL ?>/index.php"><i class="fas fa-arrow-left"></i> Back to role selection</a></div>
   </div>
 </div>
 
@@ -123,7 +124,7 @@ function togglePw() {
   const pw = document.getElementById('password');
   const btn = document.getElementById('pwToggle');
   if (pw.type === 'password') { pw.type = 'text'; btn.textContent = '🙈'; }
-  else { pw.type = 'password'; btn.textContent = '👁'; }
+  else { pw.type = 'password'; btn.textContent = '<i class="fas fa-eye"></i>'; }
 }
 </script>
 </body>

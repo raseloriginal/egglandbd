@@ -61,7 +61,7 @@ body { overflow: hidden; }
   </div>
   <div style="color:rgba(255,255,255,0.7);font-size:16px;padding:4px 10px;background:rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;margin-right:8px;" onclick="openAddRetailerSheet()"><i class="fas fa-plus"></i></div>
   <div style="color:rgba(255,255,255,0.7);font-size:13px;padding:4px 8px;background:rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;" onclick="reloadMap()">↻</div>
-  <div class="hdr-avatar" onclick="window.location='/egglandbangladesh/agent/dashboard.php'">←</div>
+  <div class="hdr-avatar" onclick="window.location='/egglandbd/agent/dashboard.php'"><i class="fas fa-arrow-left"></i></div>
 </header>
 
 <!-- Tab Bar -->
@@ -116,7 +116,7 @@ body { overflow: hidden; }
 <div class="bottom-sheet" id="sheetNewOrder">
   <div class="bs-handle"></div>
   <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()">✕</button>
+    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
     <div class="bs-title" id="soRetailerName">New Order</div>
     <div class="bs-subtitle" id="soRetailerAddr">Retailer Address</div>
   </div>
@@ -148,7 +148,7 @@ body { overflow: hidden; }
 <div class="bottom-sheet" id="sheetOrderWarning">
   <div class="bs-handle"></div>
   <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()">✕</button>
+    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
     <div class="bs-title"><i class="fas fa-exclamation-triangle text-warning"></i> Order Already Exists</div>
     <div class="bs-subtitle" id="warnRetailerName">This retailer has a pending order</div>
   </div>
@@ -170,7 +170,7 @@ body { overflow: hidden; }
 <div class="bottom-sheet" id="sheetReadySale">
   <div class="bs-handle"></div>
   <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()">✕</button>
+    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
     <div class="bs-title" id="rsRetailerName">Ready Sale</div>
     <div class="bs-subtitle" id="rsRetailerAddr">Instant sale to retailer</div>
   </div>
@@ -202,7 +202,7 @@ body { overflow: hidden; }
 <div class="bottom-sheet" id="sheetDelivery">
   <div class="bs-handle"></div>
   <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()">✕</button>
+    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
     <div class="bs-title" id="delRetailerName">Delivery</div>
     <div class="bs-subtitle" id="delRetailerAddr">Pending delivery</div>
   </div>
@@ -242,7 +242,7 @@ body { overflow: hidden; }
 <div class="bottom-sheet" id="sheetAddRetailer">
   <div class="bs-handle"></div>
   <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()">✕</button>
+    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
     <div class="bs-title">Add New Retailer</div>
     <div class="bs-subtitle">Register a new retailer in your area</div>
   </div>
@@ -287,7 +287,7 @@ body { overflow: hidden; }
 <div id="locationPickerOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:1000;flex-direction:column;">
   <div style="padding:16px;background:linear-gradient(135deg,#8B0032,#A0003A);color:#fff;display:flex;align-items:center;justify-content:space-between;">
     <div style="font-size:16px;font-weight:700;">Pin Location</div>
-    <button onclick="closeLocationPicker()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+    <button onclick="closeLocationPicker()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button>
   </div>
   <div id="pickerMap" style="flex:1;width:100%;"></div>
   <div style="padding:16px;background:#fff;box-shadow:0 -4px 12px rgba(0,0,0,0.1);">
@@ -430,7 +430,7 @@ function openSheet(id) {
 }
 
 function closeAllSheets(removeOverlay = true) {
-  ['sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery'].forEach(s => {
+  ['sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery','sheetAddRetailer'].forEach(s => {
     document.getElementById(s).classList.remove('open');
   });
   if (removeOverlay) document.getElementById('bsOverlay').classList.remove('active');
@@ -503,7 +503,7 @@ function placeOrder() {
   btn.textContent = 'Placing...';
   btn.disabled = true;
 
-  fetch('/egglandbangladesh/api/orders.php', {
+  fetch('/egglandbd/api/orders.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'create', retailer_id: currentRetailer.id, items})
@@ -522,7 +522,7 @@ function placeOrder() {
     }
   })
   .catch(() => alert('Network error. Please try again.'))
-  .finally(() => { btn.textContent = '📋 Place Order'; btn.disabled = false; });
+  .finally(() => { btn.textContent = '<i class="fas fa-clipboard-list"></i> Place Order'; btn.disabled = false; });
 }
 
 // ===== ORDER WARNING =====
@@ -532,7 +532,7 @@ function openOrderWarning(retailer) {
   document.getElementById('warnText').textContent = `${retailer.name} already has a pending order. Do you want to place another order?`;
 
   // Fetch existing order items
-  fetch('/egglandbangladesh/api/orders.php?action=get_items&order_id=' + retailer.order_id)
+  fetch('/egglandbd/api/orders.php?action=get_items&order_id=' + retailer.order_id)
   .then(r => r.json())
   .then(data => {
     const container = document.getElementById('existingOrderItems');
@@ -603,7 +603,7 @@ function confirmReadySale() {
   const items = Object.entries(readySaleItems).map(([pid, i]) => ({product_id: pid, qty: i.qty, price: i.price}));
   if (items.length === 0) { alert('Please enter at least one product with quantity.'); return; }
 
-  fetch('/egglandbangladesh/api/deliveries.php', {
+  fetch('/egglandbd/api/deliveries.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'ready_sale', retailer_id: currentRetailer.id, items})
@@ -630,7 +630,7 @@ function openDelivery(retailer) {
   document.getElementById('delRPhone').textContent = retailer.phone || '';
 
   // Fetch delivery items
-  fetch('/egglandbangladesh/api/deliveries.php?action=get_items&delivery_id=' + retailer.delivery_id)
+  fetch('/egglandbd/api/deliveries.php?action=get_items&delivery_id=' + retailer.delivery_id)
   .then(r => r.json())
   .then(data => {
     const container = document.getElementById('deliveryItemsList');
@@ -654,7 +654,7 @@ function openDelivery(retailer) {
 
 function updateDelivery(status) {
   if (!currentDeliveryId) return;
-  fetch('/egglandbangladesh/api/deliveries.php', {
+  fetch('/egglandbd/api/deliveries.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'update_status', delivery_id: currentDeliveryId, status})
@@ -789,7 +789,7 @@ function submitAddRetailer(e) {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
   btn.disabled = true;
   
-  fetch('/egglandbangladesh/api/agent_add_retailer.php', {
+  fetch('/egglandbd/api/agent_add_retailer.php', {
     method: 'POST',
     body: formData
   })
@@ -802,10 +802,9 @@ function submitAddRetailer(e) {
       closeAllSheets();
       showToast('<i class="fas fa-check-circle"></i> Retailer added successfully!', 'success');
       
-      // Add new retailer to RETAILERS array and map
       const r = data.retailer;
       RETAILERS.push(r);
-      if (currentMode === 'sales') {
+      if (currentTab === 'sales') {
         loadSalesMarkers();
       } else {
         loadDelivMarkers();

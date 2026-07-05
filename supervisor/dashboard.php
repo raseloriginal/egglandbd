@@ -53,31 +53,31 @@ $currency = getSetting('currency_symbol', '৳');
         <div class="header-subtitle">Welcome back, <?= htmlspecialchars($u['full_name']) ?></div>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-date">📅 <?= date('d M Y, H:i') ?></div>
-      <div class="header-badge">👩‍💼 Supervisor</div>
+      <div class="header-date"><i class="fas fa-calendar-alt"></i> <?= date('d M Y, H:i') ?></div>
+      <div class="header-badge"><i class="fas fa-user-tie"></i> Supervisor</div>
     </div>
     <div class="page-content">
       <div class="stats-grid">
         <div class="stat-card gold">
-          <div class="stat-icon">🧑‍💼</div>
+          <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
           <div class="stat-label">My Agents</div>
           <div class="stat-value"><?= $agentCount ?></div>
           <div class="stat-sub">Under supervision</div>
         </div>
         <div class="stat-card success">
-          <div class="stat-icon">💰</div>
+          <div class="stat-icon"><i class="fas fa-money-bill-alt"></i></div>
           <div class="stat-label">Total Deposits</div>
           <div class="stat-value"><?= $currency ?><?= number_format($totalDeposits, 0) ?></div>
           <div class="stat-sub">Collected from agents</div>
         </div>
         <div class="stat-card primary">
-          <div class="stat-icon">📦</div>
+          <div class="stat-icon"><i class="fas fa-box"></i></div>
           <div class="stat-label">Total Lots Delivered</div>
           <div class="stat-value"><?= $currency ?><?= number_format($totalLots, 0) ?></div>
           <div class="stat-sub">Goods sent to agents</div>
         </div>
         <div class="stat-card info">
-          <div class="stat-icon">⚖️</div>
+          <div class="stat-icon"><i class="fas fa-balance-scale"></i></div>
           <div class="stat-label">Net Balance (Agents Due)</div>
           <div class="stat-value"><?= $currency ?><?= number_format(abs($totalLots - $totalDeposits), 0) ?></div>
           <div class="stat-sub"><?= $totalLots > $totalDeposits ? 'Agents owe you' : 'Surplus' ?></div>
@@ -86,12 +86,12 @@ $currency = getSetting('currency_symbol', '৳');
 
       <div class="card">
         <div class="card-header">
-          <div class="card-title">⚡ Quick Actions</div>
+          <div class="card-title"><i class="fas fa-bolt"></i> Quick Actions</div>
         </div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-            <a href="<?= BASE_URL ?>/supervisor/agents.php" class="btn btn-primary btn-lg">🧑‍💼 Manage Agents</a>
-            <a href="<?= BASE_URL ?>/supervisor/agent-ledger.php" class="btn btn-gold btn-lg">📒 Agent Ledger</a>
+            <a href="<?= BASE_URL ?>/supervisor/agents.php" class="btn btn-primary btn-lg"><i class="fas fa-user-tie"></i> Manage Agents</a>
+            <a href="<?= BASE_URL ?>/supervisor/agent-ledger.php" class="btn btn-gold btn-lg"><i class="fas fa-book"></i> Agent Ledger</a>
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@ $totalRetailers = count($retailers);
     <div class="top-header">
       <div><div class="header-title">Retailers Map</div><div class="header-subtitle"><?= $totalRetailers ?> retailers with GPS coordinates</div></div>
       <div class="header-spacer"></div>
-      <div class="header-badge">🗺️ Live Map</div>
+      <div class="header-badge"><i class="fas fa-map"></i> Live Map</div>
     </div>
     <div class="page-content">
       <div class="map-container">
@@ -53,21 +53,21 @@ $totalRetailers = count($retailers);
 <script>
 const retailers = <?= json_encode($retailers, JSON_UNESCAPED_UNICODE) ?>;
 const map = L.map('retailerMap').setView([<?= $mapLat ?>, <?= $mapLng ?>], <?= $mapZoom ?>);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'<i class="fas fa-copyright"></i> OpenStreetMap'}).addTo(map);
 
 const icon = L.divIcon({
   className:'',
   html:`<div style="width:28px;height:32px;background:#8B0032;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.8);">
-    <span style="transform:rotate(45deg);font-size:11px;color:#F5A623;font-weight:900;">🏪</span></div>`,
+    <span style="transform:rotate(45deg);font-size:11px;color:#F5A623;font-weight:900;"><i class="fas fa-store"></i></span></div>`,
   iconSize:[28,32],iconAnchor:[14,32],popupAnchor:[0,-32]
 });
 
 retailers.forEach(r => {
   L.marker([r.lat, r.lng], {icon}).addTo(map)
     .bindPopup(`<div style="font-family:Inter,sans-serif;min-width:180px;">
-      <div style="font-weight:800;font-size:14px;color:#8B0032;margin-bottom:4px;">🏪 ${r.name}</div>
-      <div style="font-size:12px;color:#5C4A40;">📍 ${r.address||'No address'}</div>
-      <div style="font-size:12px;color:#5C4A40;">📞 ${r.phone||'No phone'}</div>
+      <div style="font-weight:800;font-size:14px;color:#8B0032;margin-bottom:4px;"><i class="fas fa-store"></i> ${r.name}</div>
+      <div style="font-size:12px;color:#5C4A40;"><i class="fas fa-map-marker-alt"></i> ${r.address||'No address'}</div>
+      <div style="font-size:12px;color:#5C4A40;"><i class="fas fa-phone"></i> ${r.phone||'No phone'}</div>
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8DDD6;font-size:11px;color:#9B8B82;">
         Agent: <strong>${r.agent_name}</strong> | ${r.agent_area||'—'}
       </div>

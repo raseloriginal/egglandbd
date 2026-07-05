@@ -6,12 +6,64 @@ $pdo = getDB();
 
 $success = $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pid = (int)($_POST['product_id'] ?? 0);
-    $qty = (float)($_POST['qty'] ?? 0);
-    if (!$pid) { $error = 'Select a product.'; }
-    else {
-        $pdo->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?,?) ON DUPLICATE KEY UPDATE qty_available=?")->execute([$pid, $qty, $qty]);
-        $success = 'Inventory updated.';
+    $action = $_POST['action'] ?? '';
+    
+    if ($action === 'add_provider') {
+        $name = trim($_POST['provider_name'] ?? '');
+        $type = in_array($_POST['provider_type'] ?? '', ['company', 'farm']) ? $_POST['provider_type'] : 'company';
+        
+        if (!$name) {
+            $error = 'Provider name is required.';
+        } else {
+            $pdo->prepare("INSERT INTO providers (name, type) VALUES (?, ?)")->execute([$name, $type]);
+            $success = "Provider '$name' added successfully.";
+        }
+    }
+    elseif ($action === 'add_lot') {
+        $provider_id = (int)($_POST['provider_id'] ?? 0);
+        $product_id = (int)($_POST['product_id'] ?? 0);
+        $qty = (float)($_POST['qty'] ?? 0);
+        $buying_price = (float)($_POST['buying_price'] ?? 0);
+        $selling_price = (float)($_POST['selling_price'] ?? 0);
+        
+        if (!$provider_id || !$product_id || $qty <= 0) {
+            $error = 'Please fill all required fields correctly.';
+        } else {
+            $pdo->beginTransaction();
+            try {
+                // Fetch current product prices
+                $stmt = $pdo->prepare("SELECT buying_price, price FROM products WHERE id = ?");
+                $stmt->execute([$product_id]);
+                $prod = $stmt->fetch();
+                $old_buying_price = $prod['buying_price'];
+                $old_selling_price = $prod['price'];
+                
+                // Insert into warehouse_lots
+                $pdo->prepare("INSERT INTO warehouse_lots (provider_id, product_id, qty, buying_price, selling_price) VALUES (?, ?, ?, ?, ?)")
+                    ->execute([$provider_id, $product_id, $qty, $buying_price, $selling_price]);
+                $lot_id = $pdo->lastInsertId();
+                
+                // Update product prices
+                $pdo->prepare("UPDATE products SET buying_price = ?, price = ? WHERE id = ?")
+                    ->execute([$buying_price, $selling_price, $product_id]);
+                
+                // Insert price history if changed
+                if ($old_buying_price != $buying_price || $old_selling_price != $selling_price) {
+                    $pdo->prepare("INSERT INTO product_price_history (product_id, warehouse_lot_id, old_buying_price, new_buying_price, old_selling_price, new_selling_price, source) VALUES (?, ?, ?, ?, ?, ?, 'lot_addition')")
+                        ->execute([$product_id, $lot_id, $old_buying_price, $buying_price, $old_selling_price, $selling_price]);
+                }
+                
+                // Update inventory stock (add to existing)
+                $pdo->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty_available = qty_available + ?")
+                    ->execute([$product_id, $qty, $qty]);
+                
+                $pdo->commit();
+                $success = 'Warehouse lot added and inventory updated successfully.';
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Error adding lot: ' . $e->getMessage();
+            }
+        }
     }
 }
 
@@ -19,6 +71,17 @@ $inventory = $pdo->query("
     SELECT p.*, COALESCE(i.qty_available,0) as qty_available, i.updated_at
     FROM products p LEFT JOIN inventory i ON i.product_id=p.id
     WHERE p.status='active' ORDER BY p.name
+")->fetchAll();
+
+$providers = $pdo->query("SELECT * FROM providers WHERE status='active' ORDER BY name")->fetchAll();
+
+$recent_lots = $pdo->query("
+    SELECT w.*, p.name as provider_name, pr.name as product_name, pr.unit_type
+    FROM warehouse_lots w
+    JOIN providers p ON w.provider_id = p.id
+    JOIN products pr ON w.product_id = pr.id
+    ORDER BY w.created_at DESC
+    LIMIT 50
 ")->fetchAll();
 
 $currency = getSetting('currency_symbol', '৳');
@@ -39,11 +102,11 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="top-header">
       <div><div class="header-title">Inventory</div><div class="header-subtitle">Manage stock levels for all products</div></div>
       <div class="header-spacer"></div>
-      <button class="btn btn-primary" onclick="openModal('modalUpdate')">📝 Update Stock</button>
+      <button class="btn btn-primary" onclick="openModal('modalAddLot')"><i class="fas fa-truck-loading"></i> Add Lot</button>
     </div>
     <div class="page-content">
-      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
-      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+      <?php if ($success): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
 
       <!-- Inventory Value Card -->
       <?php
@@ -57,7 +120,7 @@ $currency = getSetting('currency_symbol', '৳');
 
       <div class="table-wrapper">
         <div class="table-toolbar">
-          <div class="toolbar-title">🏪 Stock Levels</div>
+          <div class="toolbar-title"><i class="fas fa-store"></i> Stock Levels</div>
           <div class="spacer"></div>
         </div>
         <div style="overflow-x:auto;">
@@ -73,7 +136,7 @@ $currency = getSetting('currency_symbol', '৳');
               <td class="fw-700"><?= htmlspecialchars($inv['name']) ?></td>
               <td><span class="badge badge-info"><?= $inv['unit_type'] ?></span></td>
               <td class="text-right"><?= $currency ?><?= number_format($inv['price'],2) ?></td>
-              <td class="text-right fw-700"><?= number_format($inv['qty_available'],2) ?></td>
+              <td class="text-right fw-700"><?= number_format($inv['qty_available'],0) ?></td>
               <td class="text-right fw-600 text-primary-color"><?= $currency ?><?= number_format($val,2) ?></td>
               <td>
                 <div style="display:flex;align-items:center;gap:6px;">
@@ -84,7 +147,7 @@ $currency = getSetting('currency_symbol', '৳');
                 </div>
               </td>
               <td class="text-muted fs-12"><?= $inv['updated_at'] ? date('d M Y', strtotime($inv['updated_at'])) : '—' ?></td>
-              <td><button class="btn btn-ghost btn-sm" onclick="quickUpdate(<?= $inv['id'] ?>, '<?= addslashes($inv['name']) ?>', <?= $inv['qty_available'] ?>)">📝</button></td>
+              <td><button class="btn btn-ghost btn-sm" onclick="quickUpdate(<?= $inv['id'] ?>, '<?= addslashes($inv['name']) ?>', <?= $inv['qty_available'] ?>)"><i class="fas fa-file-alt"></i></button></td>
             </tr>
             <?php endforeach; ?>
           </tbody>
@@ -94,29 +157,104 @@ $currency = getSetting('currency_symbol', '৳');
         </table>
         </div>
       </div>
+
+      <!-- Recent Warehouse Lots -->
+      <div class="table-wrapper mt-24">
+        <div class="table-toolbar">
+          <div class="toolbar-title"><i class="fas fa-truck"></i> Recent Incoming Lots</div>
+          <div class="spacer"></div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Provider</th><th>Product</th><th>Unit</th><th class="text-right">Qty</th><th class="text-right">Buying Price</th><th class="text-right">Selling Price</th><th>Date</th></tr></thead>
+          <tbody>
+            <?php if (empty($recent_lots)): ?>
+              <tr><td colspan="8"><div class="table-empty"><p>No lots added yet.</p></div></td></tr>
+            <?php else: ?>
+              <?php foreach ($recent_lots as $i => $lot): ?>
+              <tr>
+                <td class="text-muted fs-12"><?= $i+1 ?></td>
+                <td class="fw-700"><?= htmlspecialchars($lot['provider_name']) ?></td>
+                <td class="fw-700"><?= htmlspecialchars($lot['product_name']) ?></td>
+                <td><span class="badge badge-info"><?= $lot['unit_type'] ?></span></td>
+                <td class="text-right fw-700 text-primary-color"><?= number_format($lot['qty'], 0) ?></td>
+                <td class="text-right"><?= $currency ?><?= number_format($lot['buying_price'], 2) ?></td>
+                <td class="text-right"><?= $currency ?><?= number_format($lot['selling_price'], 2) ?></td>
+                <td class="text-muted fs-12"><?= date('d M Y h:i A', strtotime($lot['created_at'])) ?></td>
+              </tr>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Update Stock Modal -->
-<div class="modal-overlay" id="modalUpdate" onclick="closeModalOuter(event,'modalUpdate')">
+<!-- Add Lot Modal -->
+<div class="modal-overlay" id="modalAddLot" onclick="closeModalOuter(event,'modalAddLot')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">📝 Update Stock</div><button class="modal-close" onclick="closeModal('modalUpdate')">✕</button></div>
+    <div class="modal-header"><div class="modal-title"><i class="fas fa-truck-loading"></i> Add Incoming Lot</div><button class="modal-close" onclick="closeModal('modalAddLot')"><i class="fas fa-times"></i></button></div>
     <form method="POST">
+      <input type="hidden" name="action" value="add_lot">
       <div class="modal-body">
+        <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end;">
+          <div style="flex: 1;">
+            <label class="form-label">Provider</label>
+            <select name="provider_id" class="form-control form-select" required>
+              <option value="">— Select Provider —</option>
+              <?php foreach ($providers as $prov): ?><option value="<?= $prov['id'] ?>"><?= htmlspecialchars($prov['name']) ?> (<?= ucfirst($prov['type']) ?>)</option><?php endforeach; ?>
+            </select>
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddLot'); openModal('modalAddProvider');"><i class="fas fa-plus"></i> New</button>
+        </div>
         <div class="form-group"><label class="form-label">Product</label>
-          <select name="product_id" id="stockPid" class="form-control form-select" required>
-            <option value="">— Select Product —</option>
-            <?php foreach ($inventory as $inv): ?><option value="<?= $inv['id'] ?>"><?= htmlspecialchars($inv['name']) ?> (current: <?= $inv['qty_available'] ?>)</option><?php endforeach; ?>
+          <select name="product_id" id="stockPid" class="form-control form-select" required onchange="updatePriceFields(this)">
+            <option value="" data-bp="0" data-sp="0">— Select Product —</option>
+            <?php foreach ($inventory as $inv): ?><option value="<?= $inv['id'] ?>" data-bp="<?= $inv['buying_price'] ?? 0 ?>" data-sp="<?= $inv['price'] ?>"><?= htmlspecialchars($inv['name']) ?> (current stock: <?= $inv['qty_available'] ?>)</option><?php endforeach; ?>
           </select>
         </div>
-        <div class="form-group"><label class="form-label">New Quantity</label>
+        <div class="form-group"><label class="form-label">Quantity Arrived</label>
           <input type="number" name="qty" id="stockQty" class="form-control" min="0" step="0.01" required placeholder="0.00">
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Buying Price (<?= $currency ?>) per unit</label>
+            <input type="number" name="buying_price" id="lotBuyingPrice" class="form-control" min="0" step="0.01" required placeholder="0.00">
+          </div>
+          <div class="form-group"><label class="form-label">Selling Price (<?= $currency ?>) per unit</label>
+            <input type="number" name="selling_price" id="lotSellingPrice" class="form-control" min="0" step="0.01" required placeholder="0.00">
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="closeModal('modalUpdate')">Cancel</button>
-        <button type="submit" class="btn btn-primary">💾 Update Stock</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalAddLot')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Lot</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Provider Modal -->
+<div class="modal-overlay" id="modalAddProvider" onclick="closeModalOuter(event,'modalAddProvider')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title"><i class="fas fa-industry"></i> Add Provider</div><button class="modal-close" onclick="closeModal('modalAddProvider'); openModal('modalAddLot');"><i class="fas fa-times"></i></button></div>
+    <form method="POST">
+      <input type="hidden" name="action" value="add_provider">
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Provider Name</label>
+          <input type="text" name="provider_name" class="form-control" required placeholder="e.g. Kazi Farms">
+        </div>
+        <div class="form-group"><label class="form-label">Type</label>
+          <select name="provider_type" class="form-control form-select">
+            <option value="company">Company</option>
+            <option value="farm">Farm</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalAddProvider'); openModal('modalAddLot');">Back</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Provider</button>
       </div>
     </form>
   </div>
@@ -127,9 +265,20 @@ function openModal(id){document.getElementById(id).classList.add('active');}
 function closeModal(id){document.getElementById(id).classList.remove('active');}
 function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
 function quickUpdate(id, name, current) {
-  document.getElementById('stockPid').value = id;
-  document.getElementById('stockQty').value = current;
-  openModal('modalUpdate');
+  const sel = document.getElementById('stockPid');
+  sel.value = id;
+  updatePriceFields(sel);
+  openModal('modalAddLot');
+}
+function updatePriceFields(selectEl) {
+  const option = selectEl.options[selectEl.selectedIndex];
+  if(option.value) {
+    document.getElementById('lotBuyingPrice').value = option.dataset.bp;
+    document.getElementById('lotSellingPrice').value = option.dataset.sp;
+  } else {
+    document.getElementById('lotBuyingPrice').value = '';
+    document.getElementById('lotSellingPrice').value = '';
+  }
 }
 </script>
 </body>

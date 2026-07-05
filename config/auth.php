@@ -3,11 +3,12 @@ require_once __DIR__ . '/db.php';
 if (session_status() === PHP_SESSION_NONE) {
     // Determine context path to isolate session names
     $uri = $_SERVER['REQUEST_URI'] ?? '';
-    if (strpos($uri, '/admin/') !== false || strpos($uri, 'login-admin.php') !== false) {
+    $ref = $_SERVER['HTTP_REFERER'] ?? '';
+    if (strpos($uri, '/admin/') !== false || strpos($uri, 'login-admin.php') !== false || strpos($ref, '/admin/') !== false) {
         session_name('eggland_admin_session');
-    } elseif (strpos($uri, '/supervisor/') !== false || strpos($uri, 'login-supervisor.php') !== false) {
+    } elseif (strpos($uri, '/supervisor/') !== false || strpos($uri, 'login-supervisor.php') !== false || strpos($ref, '/supervisor/') !== false) {
         session_name('eggland_supervisor_session');
-    } elseif (strpos($uri, '/agent/') !== false || strpos($uri, 'login-agent.php') !== false) {
+    } elseif (strpos($uri, '/agent/') !== false || strpos($uri, 'login-agent.php') !== false || strpos($ref, '/agent/') !== false) {
         session_name('eggland_agent_session');
     } else {
         session_name('eggland_session');

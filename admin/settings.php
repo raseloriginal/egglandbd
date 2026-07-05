@@ -49,15 +49,15 @@ $curr = getSetting('currency_symbol', '৳');
       <div class="header-spacer"></div>
     </div>
     <div class="page-content">
-      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
-      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+      <?php if ($success): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
 
       <form method="POST">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="settings-grid">
 
           <!-- Business Settings -->
           <div class="card">
-            <div class="card-header"><div class="card-title">🏢 Business Settings</div></div>
+            <div class="card-header"><div class="card-title"><i class="fas fa-building"></i> Business Settings</div></div>
             <div class="card-body">
               <div class="form-group">
                 <label class="form-label">Business Name</label>
@@ -73,7 +73,7 @@ $curr = getSetting('currency_symbol', '৳');
 
           <!-- Map Settings -->
           <div class="card">
-            <div class="card-header"><div class="card-title">🗺️ Map Center Settings</div></div>
+            <div class="card-header"><div class="card-title"><i class="fas fa-map"></i> Map Center Settings</div></div>
             <div class="card-body">
               <div class="alert alert-info">Click on the map below to set the default map center for all panels.</div>
               <div class="form-row">
@@ -98,7 +98,7 @@ $curr = getSetting('currency_symbol', '৳');
         <!-- Map picker -->
         <div class="card mt-24">
           <div class="card-header">
-            <div class="card-title">📍 Click Map to Set Center</div>
+            <div class="card-title"><i class="fas fa-map-marker-alt"></i> Click Map to Set Center</div>
             <div class="text-muted fs-12">Click anywhere on the map to update the latitude and longitude above</div>
           </div>
           <div class="card-body" style="padding:16px;">
@@ -107,7 +107,7 @@ $curr = getSetting('currency_symbol', '৳');
         </div>
 
         <div style="margin-top:20px;display:flex;justify-content:flex-end;">
-          <button type="submit" class="btn btn-primary btn-lg">💾 Save Settings</button>
+          <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Save Settings</button>
         </div>
       </form>
     </div>

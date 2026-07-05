@@ -44,22 +44,22 @@ $currency = getSetting('currency_symbol', '৳');
 
       <div class="table-wrapper">
         <div class="table-toolbar">
-          <div class="toolbar-title">📒 Full Transaction Ledger</div>
+          <div class="toolbar-title"><i class="fas fa-book"></i> Full Transaction Ledger</div>
           <div class="spacer"></div>
           <div class="search-input-wrap"><input type="text" class="search-input" placeholder="Search agent..." oninput="filterTbl(this,'ledTbl')"></div>
         </div>
         <div style="overflow-x:auto;">
-        <table class="tbl" id="ledTbl">
+        <table class="tbl" id="ledTbl" style="white-space: nowrap;">
           <thead><tr><th>#</th><th>Date</th><th>Agent</th><th>Supervisor</th><th>Type</th><th>Lot Details</th><th class="text-right">Amount</th><th>Note</th></tr></thead>
           <tbody>
-            <?php if (empty($ledger)): ?><tr><td colspan="8"><div class="table-empty"><div class="empty-icon">📒</div><p>No transactions.</p></div></td></tr>
+            <?php if (empty($ledger)): ?><tr><td colspan="8"><div class="table-empty"><div class="empty-icon"><i class="fas fa-book"></i></div><p>No transactions.</p></div></td></tr>
             <?php else: foreach ($ledger as $i=>$r): ?>
             <tr data-search="<?= strtolower($r['agent_name'].' '.$r['supervisor_name']) ?>">
               <td class="text-muted fs-12"><?= $i+1 ?></td>
               <td class="fs-12"><?= date('d M Y', strtotime($r['created_at'])) ?><br><span class="text-muted"><?= date('h:i A', strtotime($r['created_at'])) ?></span></td>
               <td class="fw-700"><?= htmlspecialchars($r['agent_name']) ?></td>
               <td class="text-muted fs-13"><?= htmlspecialchars($r['supervisor_name']??'—') ?></td>
-              <td><span class="badge <?= $r['type']==='deposit'?'badge-success':'badge-primary' ?>"><?= $r['type']==='deposit'?'💰 Deposit':'📦 Lot Delivery' ?></span></td>
+              <td><span class="badge <?= $r['type']==='deposit'?'badge-success':'badge-primary' ?>"><?= $r['type']==='deposit'?'<i class="fas fa-money-bill"></i> Deposit':'<i class="fas fa-box"></i> Lot Delivery' ?></span></td>
               <td class="text-muted fs-12" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($r['lot_details']??'') ?>"><?= htmlspecialchars($r['lot_details']??'—') ?></td>
               <td class="text-right fw-700 <?= $r['type']==='deposit'?'text-success':'text-primary-color' ?>"><?= $r['type']==='deposit'?'+':'−' ?><?= $currency ?><?= number_format($r['amount'],2) ?></td>
               <td class="text-muted fs-12"><?= htmlspecialchars($r['note']??'—') ?></td>

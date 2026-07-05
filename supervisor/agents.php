@@ -52,7 +52,7 @@ $currency = getSetting('currency_symbol', '৳');
 
       <div class="table-wrapper">
         <div class="table-toolbar">
-          <div class="toolbar-title">🧑‍💼 Agent List (<?= count($agents) ?>)</div>
+          <div class="toolbar-title"><i class="fas fa-user-tie"></i> Agent List (<?= count($agents) ?>)</div>
           <div class="spacer"></div>
           <div class="search-input-wrap">
             <input type="text" class="search-input" id="agentSearch" placeholder="Search agents..." oninput="filterTable()">
@@ -74,7 +74,7 @@ $currency = getSetting('currency_symbol', '৳');
           </thead>
           <tbody>
             <?php if (empty($agents)): ?>
-              <tr><td colspan="8"><div class="table-empty"><div class="empty-icon">🧑‍💼</div><p>No agents assigned under your supervision.</p></div></td></tr>
+              <tr><td colspan="8"><div class="table-empty"><div class="empty-icon"><i class="fas fa-user-tie"></i></div><p>No agents assigned under your supervision.</p></div></td></tr>
             <?php else: ?>
               <?php foreach ($agents as $i => $a):
                 $balance = (float)$a['total_deposit'] - (float)$a['total_lot'];

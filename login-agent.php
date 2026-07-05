@@ -50,9 +50,10 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(160deg, #8B
 .back-link { text-align: center; margin-top: 24px; font-size: 13px; color: rgba(255,255,255,0.55); }
 .back-link a { color: #F5A623; font-weight: 600; text-decoration: none; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
-<div class="app-icon">📦</div>
+<div class="app-icon"><i class="fas fa-box"></i></div>
 <div class="app-name">Agent Portal</div>
 <div class="app-sub">Eggland Bangladesh</div>
 
@@ -61,7 +62,7 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(160deg, #8B
   <div class="lc-sub">Use your agent credentials to continue.</div>
 
   <?php if ($error): ?>
-    <div class="error-msg">❌ <?= htmlspecialchars($error) ?></div>
+    <div class="error-msg"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
 
   <form method="POST" autocomplete="off">
@@ -73,7 +74,7 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(160deg, #8B
       <label class="form-label">Password</label>
       <div class="pw-wrap">
         <input type="password" id="pw" name="password" class="form-control" placeholder="••••••••" required>
-        <button type="button" class="pw-toggle" onclick="var p=document.getElementById('pw');p.type=p.type==='password'?'text':'password'">👁</button>
+        <button type="button" class="pw-toggle" onclick="var p=document.getElementById('pw');p.type=p.type==='password'?'text':'password'"><i class="fas fa-eye"></i></button>
       </div>
     </div>
     <button type="submit" class="btn-login">Sign In</button>
@@ -81,6 +82,6 @@ body { font-family: 'Inter', sans-serif; background: linear-gradient(160deg, #8B
   <div class="demo-hint">Demo: <strong>agent1</strong> / <strong>agent123</strong></div>
 </div>
 
-<div class="back-link"><a href="<?= BASE_URL ?>/index.php">← Role selection</a></div>
+<div class="back-link"><a href="<?= BASE_URL ?>/index.php"><i class="fas fa-arrow-left"></i> Role selection</a></div>
 </body>
 </html>

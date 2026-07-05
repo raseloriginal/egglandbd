@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$hasError) {
-        $steps[] = ['ok' => true, 'msg' => '✅ Installation complete! You can now log in.'];
+        $steps[] = ['ok' => true, 'msg' => '<i class="fas fa-check-circle"></i> Installation complete! You can now log in.'];
     }
 }
 ?>
@@ -123,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .link-agent { background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB; }
   .link-agent:hover { background: #E5E7EB; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
 <div class="install-card">
@@ -136,24 +137,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <p>Business Management System — Installer</p>
   </div>
 
-  <div class="badge">⚙️ First Time Setup</div>
+  <div class="badge"><i class="fas fa-cogs"></i> First Time Setup</div>
 
   <?php if (empty($steps)): ?>
   <div class="info-box">
-    <h3>📋 Demo Accounts (after install)</h3>
+    <h3><i class="fas fa-clipboard-list"></i> Demo Accounts (after install)</h3>
     <div class="account"><span>Admin</span><strong>admin / password</strong></div>
     <div class="account"><span>Supervisor</span><strong>supervisor1 / super123</strong></div>
     <div class="account"><span>Agent</span><strong>agent1 / agent123</strong></div>
   </div>
   <form method="POST">
-    <button type="submit" class="btn-install">🚀 Install Database &amp; Demo Data</button>
+    <button type="submit" class="btn-install"><i class="fas fa-rocket"></i> Install Database &amp; Demo Data</button>
   </form>
   <?php else: ?>
   <div class="steps">
     <?php foreach ($steps as $step): ?>
       <div class="step">
         <div class="step-icon <?= $step['ok'] ? 'ok' : 'err' ?>">
-          <?= $step['ok'] ? '✓' : '✗' ?>
+          <?= $step['ok'] ? '<i class="fas fa-check"></i>' : '✗' ?>
         </div>
         <div class="step-msg"><?= htmlspecialchars($step['msg']) ?></div>
       </div>
@@ -163,12 +164,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php if (!$hasError): ?>
   <div class="done-links">
     <a href="<?= BASE_URL ?>/login-admin.php" class="link-admin">🔐 Admin Login</a>
-    <a href="<?= BASE_URL ?>/login-supervisor.php" class="link-sup">👩‍💼 Supervisor Login</a>
-    <a href="<?= BASE_URL ?>/login-agent.php" class="link-agent">📱 Agent Login</a>
+    <a href="<?= BASE_URL ?>/login-supervisor.php" class="link-sup"><i class="fas fa-user-tie"></i> Supervisor Login</a>
+    <a href="<?= BASE_URL ?>/login-agent.php" class="link-agent"><i class="fas fa-mobile-alt"></i> Agent Login</a>
   </div>
   <?php else: ?>
   <form method="POST" style="margin-top:24px">
-    <button type="submit" class="btn-install">🔄 Retry Installation</button>
+    <button type="submit" class="btn-install"><i class="fas fa-sync"></i> Retry Installation</button>
   </form>
   <?php endif; ?>
   <?php endif; ?>

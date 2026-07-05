@@ -102,6 +102,8 @@ $supervisors = $pdo->query("
     ORDER BY u.full_name
 ")->fetchAll();
 
+$areas_list = $pdo->query("SELECT * FROM areas WHERE status='active' ORDER BY name")->fetchAll();
+
 $currency = getSetting('currency_symbol', '৳');
 ?>
 <!DOCTYPE html>
@@ -120,14 +122,14 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="top-header">
       <div><div class="header-title">All Agents</div><div class="header-subtitle">Overview of all agents in the system</div></div>
       <div class="header-spacer"></div>
-      <button class="btn btn-primary" onclick="openModal('modalAdd')">➕ Add Agent</button>
+      <button class="btn btn-primary" onclick="openModal('modalAdd')"><i class="fas fa-plus"></i> Add Agent</button>
     </div>
     <div class="page-content">
-      <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
-      <?php if ($error): ?><div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div><?php endif; ?>
+      <?php if ($success): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div><?php endif; ?>
+      <?php if ($error): ?><div class="alert alert-danger"><i class="fas fa-times-circle"></i> <?= htmlspecialchars($error) ?></div><?php endif; ?>
       <div class="table-wrapper">
         <div class="table-toolbar">
-          <div class="toolbar-title">🧑‍💼 Agents (<?= count($agents) ?>)</div>
+          <div class="toolbar-title"><i class="fas fa-user-tie"></i> Agents (<?= count($agents) ?>)</div>
           <div class="spacer"></div>
           <div class="search-input-wrap"><input type="text" class="search-input" placeholder="Search..." oninput="filterTbl(this,'agTbl')"></div>
         </div>
@@ -135,7 +137,7 @@ $currency = getSetting('currency_symbol', '৳');
         <table class="tbl" id="agTbl">
           <thead><tr><th>#</th><th>Agent Name</th><th>Username</th><th>Phone</th><th>Supervisor</th><th>Area</th><th>Retailers</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            <?php if (empty($agents)): ?><tr><td colspan="10"><div class="table-empty"><div class="empty-icon">🧑‍💼</div><p>No agents.</p></div></td></tr>
+            <?php if (empty($agents)): ?><tr><td colspan="10"><div class="table-empty"><div class="empty-icon"><i class="fas fa-user-tie"></i></div><p>No agents.</p></div></td></tr>
             <?php else: foreach ($agents as $i=>$a):
               $balance = (float)$a['total_deposit'] - (float)$a['total_lot'];
             ?>
@@ -150,8 +152,8 @@ $currency = getSetting('currency_symbol', '৳');
               <td class="<?= $balance >= 0 ? 'balance-positive' : 'balance-negative' ?>"><?= $currency ?><?= number_format(abs($balance),2) ?><?= $balance<0?' (due)':'' ?></td>
               <td><span class="badge <?= $a['status']==='active'?'badge-success':'badge-danger' ?>"><?= $a['status'] ?></span></td>
               <td><div style="display:flex;gap:6px;">
-                <button class="btn btn-ghost btn-sm" onclick='openEdit(<?= json_encode($a, JSON_HEX_APOS) ?>)'>✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="delAgent(<?= $a['user_id'] ?>,'<?= addslashes($a['full_name']) ?>')">🗑️</button>
+                <button class="btn btn-ghost btn-sm" onclick='openEdit(<?= json_encode($a, JSON_HEX_APOS) ?>)'><i class="fas fa-edit"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="delAgent(<?= $a['user_id'] ?>,'<?= addslashes($a['full_name']) ?>')"><i class="fas fa-trash-alt"></i></button>
               </div></td>
             </tr>
             <?php endforeach; endif; ?>
@@ -165,7 +167,7 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Add Modal -->
 <div class="modal-overlay" id="modalAdd" onclick="closeModalOuter(event,'modalAdd')">
-  <div class="modal"><div class="modal-header"><div class="modal-title">➕ Add Agent</div><button class="modal-close" onclick="closeModal('modalAdd')">✕</button></div>
+  <div class="modal"><div class="modal-header"><div class="modal-title"><i class="fas fa-plus"></i> Add Agent</div><button class="modal-close" onclick="closeModal('modalAdd')"><i class="fas fa-times"></i></button></div>
   <form method="POST"><input type="hidden" name="action" value="add">
   <div class="modal-body">
     <div class="form-row">
@@ -174,7 +176,15 @@ $currency = getSetting('currency_symbol', '৳');
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Phone</label><input type="tel" name="phone" class="form-control"></div>
-      <div class="form-group"><label class="form-label">Area</label><input type="text" name="area" class="form-control"></div>
+      <div class="form-group">
+        <label class="form-label">Area</label>
+        <select name="area" class="form-control form-select">
+          <option value="">— Select Area —</option>
+          <?php foreach ($areas_list as $area_item): ?>
+            <option value="<?= htmlspecialchars($area_item['name']) ?>"><?= htmlspecialchars($area_item['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -189,13 +199,13 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="form-group"><label class="form-label">Password *</label><input type="password" name="password" class="form-control" required></div>
     </div>
   </div>
-  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary">➕ Create</button></div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button></div>
   </form></div>
 </div>
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="modalEdit" onclick="closeModalOuter(event,'modalEdit')">
-  <div class="modal"><div class="modal-header"><div class="modal-title">✏️ Edit Agent</div><button class="modal-close" onclick="closeModal('modalEdit')">✕</button></div>
+  <div class="modal"><div class="modal-header"><div class="modal-title"><i class="fas fa-edit"></i> Edit Agent</div><button class="modal-close" onclick="closeModal('modalEdit')"><i class="fas fa-times"></i></button></div>
   <form method="POST"><input type="hidden" name="action" value="edit"><input type="hidden" name="user_id" id="eUid"><input type="hidden" name="agent_id" id="eAgentId">
   <div class="modal-body">
     <div class="form-row">
@@ -203,7 +213,15 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="form-group"><label class="form-label">Phone</label><input type="tel" name="phone" id="ePhone" class="form-control"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Area</label><input type="text" name="area" id="eArea" class="form-control"></div>
+      <div class="form-group">
+        <label class="form-label">Area</label>
+        <select name="area" id="eArea" class="form-control form-select">
+          <option value="">— Select Area —</option>
+          <?php foreach ($areas_list as $area_item): ?>
+            <option value="<?= htmlspecialchars($area_item['name']) ?>"><?= htmlspecialchars($area_item['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
       <div class="form-group"><label class="form-label">Status</label><select name="status" id="eStatus" class="form-control form-select"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
     </div>
     <div class="form-row">
@@ -219,7 +237,7 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="form-group"><label class="form-label">New Password <span class="text-muted">(blank = no change)</span></label><input type="password" name="password" class="form-control"></div>
     </div>
   </div>
-  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary">💾 Save</button></div>
+  <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button></div>
   </form></div>
 </div>
 <form method="POST" id="delForm" style="display:none;"><input type="hidden" name="action" value="delete"><input type="hidden" name="user_id" id="delUid"></form>
