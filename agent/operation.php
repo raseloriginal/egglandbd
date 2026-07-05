@@ -374,6 +374,7 @@ const CURRENCY  = '<?= $currency ?>';
 const MAP_LAT   = <?= (float)$mapLat ?>;
 const MAP_LNG   = <?= (float)$mapLng ?>;
 const MAP_ZOOM  = <?= (int)$mapZoom ?>;
+const BASE_URL  = '<?= BASE_URL ?>';
 
 // ===== STATE =====
 let currentTab    = 'sales';
@@ -587,7 +588,7 @@ function placeOrder() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> অর্ডার প্লেস হচ্ছে...';
   btn.disabled = true;
 
-  fetch('/egglandbd/api/orders.php', {
+  fetch(BASE_URL + '/api/orders.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'create', retailer_id: currentRetailer.id, items})
@@ -616,7 +617,7 @@ function openOrderWarning(retailer) {
   document.getElementById('warnText').textContent = `${retailer.name} এর একটি পেন্ডিং অর্ডার ইতিমধ্যে আছে। আপনি কি আরেকটি অর্ডার করতে চান?`;
 
   // Fetch existing order items
-  fetch('/egglandbd/api/orders.php?action=get_items&order_id=' + retailer.order_id)
+  fetch(BASE_URL + '/api/orders.php?action=get_items&order_id=' + retailer.order_id)
   .then(r => r.json())
   .then(data => {
     const container = document.getElementById('existingOrderItems');
@@ -688,7 +689,7 @@ function confirmReadySale() {
   const items = Object.entries(readySaleItems).map(([pid, i]) => ({product_id: pid, qty: i.qty, price: i.price}));
   if (items.length === 0) { alert('অনুগ্রহ করে পণ্যের পরিমাণ দিন।'); return; }
 
-  fetch('/egglandbd/api/deliveries.php', {
+  fetch(BASE_URL + '/api/deliveries.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'ready_sale', retailer_id: currentRetailer.id, items})
@@ -715,7 +716,7 @@ function openDelivery(retailer) {
   document.getElementById('delRPhone').textContent = retailer.phone || '';
 
   // Fetch delivery items
-  fetch('/egglandbd/api/deliveries.php?action=get_items&delivery_id=' + retailer.delivery_id)
+  fetch(BASE_URL + '/api/deliveries.php?action=get_items&delivery_id=' + retailer.delivery_id)
   .then(r => r.json())
   .then(data => {
     const container = document.getElementById('deliveryItemsList');
@@ -739,7 +740,7 @@ function openDelivery(retailer) {
 
 function updateDelivery(status) {
   if (!currentDeliveryId) return;
-  fetch('/egglandbd/api/deliveries.php', {
+  fetch(BASE_URL + '/api/deliveries.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({action: 'update_status', delivery_id: currentDeliveryId, status})
@@ -882,7 +883,7 @@ function submitAddRetailer(e) {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Saving...';
   btn.disabled = true;
   
-  fetch('/egglandbd/api/agent_add_retailer.php', {
+  fetch(BASE_URL + '/api/agent_add_retailer.php', {
     method: 'POST',
     body: formData
   })
