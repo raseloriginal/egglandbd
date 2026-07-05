@@ -10,84 +10,125 @@ $stmt->execute([$agentId]);
 $retailers = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <meta name="theme-color" content="#8B0032">
     <title>Retailers — Eggland Bangladesh</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/agent.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#8B0032',
+                light: '#A0003A',
+                dark: '#5A0020'
+              },
+              gold: {
+                DEFAULT: '#F5A623',
+                light: '#F8B646',
+                dark: '#D48C16'
+              },
+              brandbg: '#F0EBE8'
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
     <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
-    <style>
-        .search-bar { background: #fff; padding: 12px 16px; position: sticky; top: 58px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .search-input-wrap { position: relative; }
-        .search-input-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; }
-        .search-input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid #E5E7EB; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
-        .search-input:focus { border-color: #8B0032; }
-        
-        .retailer-list { padding: 16px; padding-bottom: 80px; }
-        .retailer-card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 14px; }
-        .rc-icon { width: 44px; height: 44px; background: #FEF2F2; color: #DC2626; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-        .rc-info { flex: 1; }
-        .rc-name { font-size: 15px; font-weight: 700; color: #1F2937; margin-bottom: 4px; }
-        .rc-address { font-size: 12px; color: #6B7280; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-        .rc-phone { font-size: 12px; font-weight: 600; color: #4B5563; display: flex; align-items: center; gap: 4px; }
-        
-        .rc-actions { display: flex; gap: 8px; }
-        .rc-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; }
-        .rc-btn-call { background: #DCFCE7; color: #16A34A; }
-    </style>
 </head>
-<body class="agent-body">
-    <header class="agent-header">
-        <div class="hdr-logo-icon">E</div>
-        <div class="hdr-title">
-            <div class="hdr-name">Retailers</div>
-            <div class="hdr-sub"><?= count($retailers) ?> Assigned</div>
+<body class="bg-brandbg min-h-full flex flex-col font-sans antialiased text-slate-800 pb-20">
+    <header class="bg-primary text-white h-14 flex items-center px-4 sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-3 w-full">
+            <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
+            <div class="flex-1">
+                <h1 class="text-sm font-bold leading-tight">Retailers</h1>
+                <p class="text-[10px] text-white/60 font-semibold"><?= count($retailers) ?> Assigned</p>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="history.back()">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </div>
         </div>
-        <div class="hdr-avatar" onclick="history.back()"><i class="fas fa-arrow-left"></i></div>
     </header>
 
-    <div class="search-bar">
-        <div class="search-input-wrap">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Search retailers by name or phone...">
+    <div class="bg-white p-3 sticky top-14 z-40 shadow-sm border-b border-slate-100">
+        <div class="max-w-2xl mx-auto relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-400" placeholder="Search retailers by name or phone...">
         </div>
     </div>
 
-    <main class="retailer-list">
+    <main class="flex-1 max-w-2xl mx-auto w-full p-4">
         <?php if (empty($retailers)): ?>
-            <div class="agent-blank" style="margin-top: 40px;">
-                <div class="ab-icon"><i class="fas fa-warehouse"></i></div>
-                <h2>No Retailers Found</h2>
-                <p>You don't have any active retailers assigned to your area yet.</p>
+            <div class="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100/50 flex flex-col items-center mt-8">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg mb-3">
+                    <i class="fas fa-warehouse"></i>
+                </div>
+                <h2 class="text-base font-bold text-slate-800">No Retailers Found</h2>
+                <p class="text-xs text-slate-400 mt-1">You don't have any active retailers assigned to your area yet.</p>
             </div>
         <?php else: ?>
-            <?php foreach ($retailers as $r): ?>
-                <div class="retailer-card" data-search="<?= strtolower(htmlspecialchars($r['name'] . ' ' . $r['phone'])) ?>">
-                    <div class="rc-icon"><i class="fas fa-store"></i></div>
-                    <div class="rc-info">
-                        <div class="rc-name"><?= htmlspecialchars($r['name']) ?></div>
-                        <div class="rc-address"><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($r['address'] ?: 'Location pinned') ?></div>
-                        <div class="rc-phone"><i class="fas fa-phone-alt"></i> <?= htmlspecialchars($r['phone'] ?: 'N/A') ?></div>
+            <div class="space-y-3">
+                <?php foreach ($retailers as $r): ?>
+                    <div class="retailer-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100/50 flex items-center gap-4" data-search="<?= strtolower(htmlspecialchars($r['name'] . ' ' . $r['phone'])) ?>">
+                        <div class="w-11 h-11 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-lg shrink-0">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-bold text-slate-900 truncate leading-snug"><?= htmlspecialchars($r['name']) ?></h4>
+                            <p class="text-xs text-slate-400 font-medium truncate flex items-center gap-1.5 mt-0.5">
+                                <i class="fas fa-map-marker-alt text-slate-300"></i>
+                                <span><?= htmlspecialchars($r['address'] ?: 'Location pinned') ?></span>
+                            </p>
+                            <p class="text-xs text-slate-500 font-bold flex items-center gap-1.5 mt-0.5">
+                                <i class="fas fa-phone-alt text-slate-300"></i>
+                                <span><?= htmlspecialchars($r['phone'] ?: 'N/A') ?></span>
+                            </p>
+                        </div>
+                        <?php if (!empty($r['phone'])): ?>
+                        <div class="shrink-0">
+                            <a href="tel:<?= htmlspecialchars($r['phone']) ?>" class="w-9 h-9 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-sm hover:bg-green-100 transition-colors">
+                                <i class="fas fa-phone"></i>
+                            </a>
+                        </div>
+                        <?php endif; ?>
                     </div>
-                    <?php if (!empty($r['phone'])): ?>
-                    <div class="rc-actions">
-                        <a href="tel:<?= htmlspecialchars($r['phone']) ?>" class="rc-btn rc-btn-call"><i class="fas fa-phone"></i></a>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
     </main>
 
-    <nav class="bottom-nav">
-        <a href="<?= BASE_URL ?>/agent/dashboard.php"><span class="nav-icon"><i class="fas fa-home"></i></span><span>Home</span></a>
-        <a href="<?= BASE_URL ?>/agent/operation.php"><span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span><span>Map</span></a>
-        <a href="<?= BASE_URL ?>/agent/retailers.php" class="active"><span class="nav-icon"><i class="fas fa-warehouse"></i></span><span>Retailers</span></a>
-        <a href="<?= BASE_URL ?>/agent/ledger.php"><span class="nav-icon"><i class="fas fa-book"></i></span><span>Ledger</span></a>
-        <a href="<?= BASE_URL ?>/agent/sales.php"><span class="nav-icon"><i class="fas fa-chart-line"></i></span><span>Sales</span></a>
+    <!-- Bottom Nav -->
+    <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
+        <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+            <span class="text-lg"><i class="fas fa-home"></i></span>
+            <span>Home</span>
+        </a>
+        <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+            <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
+            <span>Map</span>
+        </a>
+        <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
+            <span class="text-lg"><i class="fas fa-warehouse"></i></span>
+            <span>Retailers</span>
+        </a>
+        <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+            <span class="text-lg"><i class="fas fa-book"></i></span>
+            <span>Ledger</span>
+        </a>
+        <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+            <span class="text-lg"><i class="fas fa-chart-line"></i></span>
+            <span>Sales</span>
+        </a>
     </nav>
 
     <script>

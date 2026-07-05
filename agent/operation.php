@@ -34,249 +34,315 @@ if ($agentId) {
 $currency = getSetting('currency_symbol', '৳');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#8B0032">
 <title>Operation Map — Eggland Bangladesh</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/agent.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: {
+            DEFAULT: '#8B0032',
+            light: '#A0003A',
+            dark: '#5A0020'
+          },
+          gold: {
+            DEFAULT: '#F5A623',
+            light: '#F8B646',
+            dark: '#D48C16'
+          },
+          brandbg: '#F0EBE8'
+        },
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.css">
 <style>
-body { overflow: hidden; }
-.op-tab-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+/* CSS transition helpers for sheets and custom Leaflet styles */
+.bottom-sheet {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bottom-sheet.open {
+  transform: translateY(0);
+}
+.bottom-sheet-overlay {
+  transition: opacity 0.3s ease;
+}
+.bottom-sheet-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.map-tooltip {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 11px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 </style>
 </head>
-<body class="agent-body" style="height:100vh;overflow:hidden;">
+<body class="bg-brandbg h-full w-full overflow-hidden select-none font-sans antialiased text-slate-800">
 
 <!-- Header -->
-<header class="agent-header" style="position:fixed;z-index:300;">
-  <div class="hdr-logo-icon">E</div>
-  <div class="hdr-title">
-    <div class="hdr-name">Operation Map</div>
-    <div class="hdr-sub" id="tabLabel">Sales Mode</div>
+<header class="bg-primary text-white h-14 flex items-center px-4 fixed top-0 left-0 right-0 z-[300] shadow-md">
+  <div class="flex items-center gap-3 w-full">
+    <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
+    <div class="flex-grow">
+      <h1 class="text-sm font-bold leading-tight">Operation Map</h1>
+      <p class="text-[10px] text-white/60 font-semibold" id="tabLabel">Sales Mode</p>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="openAddRetailerSheet()">
+      <i class="fas fa-plus text-sm"></i>
+    </button>
+    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="reloadMap()">
+      <i class="fas fa-redo text-sm"></i>
+    </button>
+    <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="window.location='/egglandbd/agent/dashboard.php'">
+      <i class="fas fa-arrow-left text-sm"></i>
+    </div>
   </div>
-  <div style="color:rgba(255,255,255,0.7);font-size:16px;padding:4px 10px;background:rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;margin-right:8px;" onclick="openAddRetailerSheet()"><i class="fas fa-plus"></i></div>
-  <div style="color:rgba(255,255,255,0.7);font-size:13px;padding:4px 8px;background:rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;" onclick="reloadMap()">↻</div>
-  <div class="hdr-avatar" onclick="window.location='/egglandbd/agent/dashboard.php'"><i class="fas fa-arrow-left"></i></div>
 </header>
 
 <!-- Tab Bar -->
-<div class="op-tab-bar" style="top:58px;">
-  <div class="op-tab active" id="tabSales" onclick="switchTab('sales')">
-    <span class="op-tab-icon"><i class="fas fa-shopping-cart"></i></span> Sales
-  </div>
-  <div class="op-tab" id="tabDelivery" onclick="switchTab('delivery')">
-    <span class="op-tab-icon"><i class="fas fa-shipping-fast"></i></span> Delivery
-  </div>
+<div class="flex bg-white border-b border-slate-100 fixed top-14 left-0 right-0 h-12 z-[250] shadow-sm">
+  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary">
+    <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> Sales
+  </button>
+  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent">
+    <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> Delivery
+  </button>
 </div>
 
-<!-- Map -->
-<div id="leaflet-map" style="position:fixed;top:110px;bottom:64px;left:0;width:100%;z-index:100;"></div>
+<!-- Map Container -->
+<div id="leaflet-map" class="fixed top-[104px] bottom-16 left-0 w-full z-10"></div>
 
 <!-- Map Legend -->
-<div class="map-legend" id="mapLegend" style="position:fixed;bottom:84px;right:16px;z-index:150;">
+<div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
   <div id="legend-sales">
-    <div class="legend-item"><div class="legend-dot" style="background:#6B7280;"></div>No order</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#16A34A;"></div>Has order</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>No order</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>Has order</div>
   </div>
-  <div id="legend-delivery" style="display:none;">
-    <div class="legend-item"><div class="legend-dot" style="background:#6B7280;"></div>No delivery</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#2563EB;"></div>Pending delivery</div>
+  <div id="legend-delivery" class="hidden">
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>No delivery</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>Pending delivery</div>
   </div>
 </div>
 
 <!-- Bottom Nav -->
-<nav class="bottom-nav" style="position:fixed;bottom:0;">
-  <a href="<?= BASE_URL ?>/agent/dashboard.php">
-    <span class="nav-icon"><i class="fas fa-home"></i></span><span>Home</span>
+<nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-[250] flex items-center justify-around px-2 shadow-lg">
+  <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+    <span class="text-lg"><i class="fas fa-home"></i></span>
+    <span>Home</span>
   </a>
-  <a href="<?= BASE_URL ?>/agent/operation.php" class="active">
-    <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span><span>Map</span>
+  <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
+    <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
+    <span>Map</span>
   </a>
-  <a href="<?= BASE_URL ?>/agent/retailers.php">
-    <span class="nav-icon"><i class="fas fa-warehouse"></i></span><span>Retailers</span>
+  <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+    <span class="text-lg"><i class="fas fa-warehouse"></i></span>
+    <span>Retailers</span>
   </a>
-  <a href="<?= BASE_URL ?>/agent/ledger.php">
-    <span class="nav-icon"><i class="fas fa-book"></i></span><span>Ledger</span>
+  <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+    <span class="text-lg"><i class="fas fa-book"></i></span>
+    <span>Ledger</span>
   </a>
-  <a href="<?= BASE_URL ?>/agent/sales.php">
-    <span class="nav-icon"><i class="fas fa-chart-line"></i></span><span>Sales</span>
+  <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
+    <span class="text-lg"><i class="fas fa-chart-line"></i></span>
+    <span>Sales</span>
   </a>
 </nav>
 
 <!-- ========== BOTTOM SHEETS ========== -->
 <!-- Overlay -->
-<div class="bottom-sheet-overlay" id="bsOverlay" onclick="closeAllSheets()"></div>
+<div class="bottom-sheet-overlay fixed inset-0 bg-black/55 opacity-0 pointer-events-none z-[350]" id="bsOverlay" onclick="closeAllSheets()"></div>
 
-<!-- Sheet 1: New Order (gray pin in sales tab) -->
-<div class="bottom-sheet" id="sheetNewOrder">
-  <div class="bs-handle"></div>
-  <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
-    <div class="bs-title" id="soRetailerName">New Order</div>
-    <div class="bs-subtitle" id="soRetailerAddr">Retailer Address</div>
+<!-- Sheet 1: New Order -->
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetNewOrder">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900" id="soRetailerName">New Order</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="soRetailerAddr">Retailer Address</p>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
-  <div class="bs-body">
-    <div class="retailer-info-strip">
-      <div class="ri-icon"><i class="fas fa-warehouse text-white"></i></div>
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <div class="bg-primary/5 rounded-2xl p-4 flex items-center gap-3 border border-primary/10">
+      <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-warehouse"></i></div>
       <div>
-        <div class="ri-name" id="soRName2">Retailer Name</div>
-        <div class="ri-phone" id="soRPhone">Phone</div>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="soRName2">Retailer Name</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="soRPhone">Phone</p>
       </div>
     </div>
-    <div style="font-size:12px;font-weight:700;color:#5C4A40;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">Select Products & Quantity</div>
-    <div class="product-list" id="orderProductList">
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Select Products & Quantity</div>
+    <div class="space-y-3" id="orderProductList">
       <!-- Populated by JS -->
     </div>
-    <div class="order-total" id="orderTotal">
-      <div class="ot-label">Total Amount</div>
-      <div class="ot-value" id="orderTotalVal"><?= $currency ?>0</div>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+      <span class="text-xs font-bold text-slate-500 uppercase">Total Amount</span>
+      <span class="text-lg font-black text-primary" id="orderTotalVal"><?= $currency ?>0</span>
     </div>
   </div>
-  <div class="bs-footer">
-    <button class="btn-login-agent" id="btnPlaceOrder" onclick="placeOrder()" style="width:100%;padding:14px;background:linear-gradient(135deg,#8B0032,#A0003A);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;">
-      <i class="fas fa-clipboard-list"></i> Place Order
+  <div class="p-4 border-t border-slate-100 bg-white shrink-0">
+    <button class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98]" id="btnPlaceOrder" onclick="placeOrder()">
+      <i class="fas fa-clipboard-list mr-1.5"></i> Place Order
     </button>
   </div>
 </div>
 
 <!-- Sheet 2: Already has order warning -->
-<div class="bottom-sheet" id="sheetOrderWarning">
-  <div class="bs-handle"></div>
-  <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
-    <div class="bs-title"><i class="fas fa-exclamation-triangle text-warning"></i> Order Already Exists</div>
-    <div class="bs-subtitle" id="warnRetailerName">This retailer has a pending order</div>
-  </div>
-  <div class="bs-body">
-    <div class="warning-box">
-      <div class="wb-title"><i class="fas fa-exclamation-circle"></i> Existing Order Found</div>
-      <div class="wb-text" id="warnText">This retailer already has a pending order. Do you want to add another order?</div>
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetOrderWarning">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900"><i class="fas fa-exclamation-triangle text-amber-500 mr-1.5"></i> Order Already Exists</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="warnRetailerName">This retailer has a pending order</p>
     </div>
-    <div style="font-size:13px;color:#5C4A40;margin-bottom:14px;">Existing order items:</div>
-    <div id="existingOrderItems" class="delivery-items-list"></div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
-  <div class="bs-footer" style="display:flex;gap:10px;">
-    <button onclick="closeAllSheets()" style="flex:1;padding:13px;background:#F0EBE8;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:#5C4A40;">Cancel</button>
-    <button onclick="proceedNewOrder()" style="flex:1;padding:13px;background:linear-gradient(135deg,#8B0032,#A0003A);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">Order Again</button>
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-xs font-semibold flex gap-2.5">
+      <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
+      <span id="warnText">This retailer already has a pending order. Do you want to add another order?</span>
+    </div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Existing order items:</div>
+    <div id="existingOrderItems" class="space-y-2.5"></div>
+  </div>
+  <div class="p-4 border-t border-slate-100 bg-white flex gap-3 shrink-0">
+    <button onclick="closeAllSheets()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition-all">Cancel</button>
+    <button onclick="proceedNewOrder()" class="flex-1 py-3.5 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all">Order Again</button>
   </div>
 </div>
 
-<!-- Sheet 3: Ready Sale (gray pin in delivery tab) -->
-<div class="bottom-sheet" id="sheetReadySale">
-  <div class="bs-handle"></div>
-  <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
-    <div class="bs-title" id="rsRetailerName">Ready Sale</div>
-    <div class="bs-subtitle" id="rsRetailerAddr">Instant sale to retailer</div>
+<!-- Sheet 3: Ready Sale -->
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetReadySale">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900" id="rsRetailerName">Ready Sale</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="rsRetailerAddr">Instant sale to retailer</p>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
-  <div class="bs-body">
-    <div class="retailer-info-strip">
-      <div class="ri-icon"><i class="fas fa-bolt text-white"></i></div>
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <div class="bg-green-50 rounded-2xl p-4 flex items-center gap-3 border border-green-100">
+      <div class="w-10 h-10 rounded-xl bg-green-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-bolt"></i></div>
       <div>
-        <div class="ri-name" id="rsRName2">Retailer Name</div>
-        <div class="ri-phone" id="rsRPhone">Phone</div>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="rsRName2">Retailer Name</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="rsRPhone">Phone</p>
       </div>
     </div>
-    <div style="font-size:12px;font-weight:700;color:#5C4A40;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">Products — Qty & Price</div>
-    <div id="readySaleList">
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Products — Qty & Price</div>
+    <div class="space-y-3" id="readySaleList">
       <!-- Populated by JS -->
     </div>
-    <div class="order-total" id="rsTotal">
-      <div class="ot-label">Total Amount</div>
-      <div class="ot-value" id="rsTotalVal"><?= $currency ?>0</div>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+      <span class="text-xs font-bold text-slate-500 uppercase">Total Amount</span>
+      <span class="text-lg font-black text-green-600" id="rsTotalVal"><?= $currency ?>0</span>
     </div>
   </div>
-  <div class="bs-footer">
-    <button onclick="confirmReadySale()" style="width:100%;padding:14px;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;">
-      <i class="fas fa-bolt"></i> Complete Sale
+  <div class="p-4 border-t border-slate-100 bg-white shrink-0">
+    <button onclick="confirmReadySale()" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-base font-bold shadow-lg shadow-green-600/25 transition-all active:scale-[0.98]">
+      <i class="fas fa-bolt mr-1.5"></i> Complete Sale
     </button>
   </div>
 </div>
 
-<!-- Sheet 4: Delivery (blue pin) -->
-<div class="bottom-sheet" id="sheetDelivery">
-  <div class="bs-handle"></div>
-  <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
-    <div class="bs-title" id="delRetailerName">Delivery</div>
-    <div class="bs-subtitle" id="delRetailerAddr">Pending delivery</div>
+<!-- Sheet 4: Delivery -->
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetDelivery">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900" id="delRetailerName">Delivery</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="delRetailerAddr">Pending delivery</p>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
-  <div class="bs-body">
-    <div class="retailer-info-strip">
-      <div class="ri-icon"><i class="fas fa-shipping-fast text-white"></i></div>
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <div class="bg-blue-50 rounded-2xl p-4 flex items-center gap-3 border border-blue-100">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-shipping-fast"></i></div>
       <div>
-        <div class="ri-name" id="delRName2">Retailer Name</div>
-        <div class="ri-phone" id="delRPhone">Phone</div>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="delRName2">Retailer Name</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="delRPhone">Phone</p>
       </div>
     </div>
-    <div style="font-size:12px;font-weight:700;color:#5C4A40;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">Order Items to Deliver</div>
-    <div class="delivery-items-list" id="deliveryItemsList"></div>
-    <div class="order-total">
-      <div class="ot-label">Total</div>
-      <div class="ot-value" id="delTotalVal"><?= $currency ?>0</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Items to Deliver</div>
+    <div class="space-y-2" id="deliveryItemsList"></div>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
+      <span class="text-xs font-bold text-slate-500 uppercase">Total</span>
+      <span class="text-lg font-black text-slate-900" id="delTotalVal"><?= $currency ?>0</span>
     </div>
-    <div style="font-size:12px;font-weight:700;color:#5C4A40;text-transform:uppercase;letter-spacing:0.6px;margin:14px 0 10px;">Update Delivery Status</div>
-    <div class="delivery-actions">
-      <button class="del-btn del-btn-complete" onclick="updateDelivery('completed')">
-        <span class="del-icon"><i class="fas fa-check-circle"></i></span> Complete
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2">Update Delivery Status</div>
+    <div class="grid grid-cols-2 gap-3">
+      <button class="py-3 bg-green-50 text-green-600 hover:bg-green-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-green-200/50 transition-colors" onclick="updateDelivery('completed')">
+        <i class="fas fa-check-circle"></i> Complete
       </button>
-      <button class="del-btn del-btn-due" onclick="updateDelivery('due')">
-        <span class="del-icon"><i class="fas fa-clock"></i></span> Due
+      <button class="py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-red-200/50 transition-colors" onclick="updateDelivery('due')">
+        <i class="fas fa-clock"></i> Due
       </button>
-      <button class="del-btn del-btn-partial" onclick="updateDelivery('partial')">
-        <span class="del-icon"><i class="fas fa-boxes"></i></span> Partial
+      <button class="py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-blue-200/50 transition-colors" onclick="updateDelivery('partial')">
+        <i class="fas fa-boxes"></i> Partial
       </button>
-      <button class="del-btn del-btn-cancel" onclick="updateDelivery('cancelled')">
-        <span class="del-icon"><i class="fas fa-times-circle"></i></span> Cancel
+      <button class="py-3 bg-slate-50 text-slate-500 hover:bg-slate-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-slate-200/50 transition-colors" onclick="updateDelivery('cancelled')">
+        <i class="fas fa-times-circle"></i> Cancel
       </button>
     </div>
   </div>
 </div>
 
 <!-- Sheet 5: Add Retailer -->
-<div class="bottom-sheet" id="sheetAddRetailer">
-  <div class="bs-handle"></div>
-  <div class="bs-header">
-    <button class="bs-close" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
-    <div class="bs-title">Add New Retailer</div>
-    <div class="bs-subtitle">Register a new retailer in your area</div>
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetAddRetailer">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900">Add New Retailer</h3>
+      <p class="text-xs text-slate-400 font-semibold">Register a new retailer in your area</p>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
-  <div class="bs-body">
-    <form id="addRetailerForm" onsubmit="submitAddRetailer(event)">
-      <div class="input-group" style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:#5C4A40;margin-bottom:4px;">Retailer Name *</label>
-        <input type="text" id="arName" required style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;">
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <form id="addRetailerForm" onsubmit="submitAddRetailer(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Retailer Name *</label>
+        <input type="text" id="arName" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
-      <div class="input-group" style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:#5C4A40;margin-bottom:4px;">Shop Name (Optional)</label>
-        <input type="text" id="arShopName" style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Shop Name (Optional)</label>
+        <input type="text" id="arShopName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
-      <div class="input-group" style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:#5C4A40;margin-bottom:4px;">Phone Number *</label>
-        <input type="tel" id="arPhone" required style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Phone Number *</label>
+        <input type="tel" id="arPhone" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
-      <div class="input-group" style="margin-bottom:12px;">
-        <label style="display:block;font-size:12px;font-weight:700;color:#5C4A40;margin-bottom:4px;">Retailer Image (Optional)</label>
-        <input type="file" id="arImage" accept="image/*" style="width:100%;padding:8px;border:1px solid #D1D5DB;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Retailer Image (Optional)</label>
+        <input type="file" id="arImage" accept="image/*" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none transition-all file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/5 file:text-primary hover:file:bg-primary/10">
       </div>
       
-      <div style="font-size:12px;font-weight:700;color:#5C4A40;margin-bottom:4px;">Location</div>
-      <div style="display:flex;gap:10px;margin-bottom:16px;">
-        <div style="flex:1;">
-          <input type="text" id="arLat" placeholder="Latitude" readonly required style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;background:#F9FAFB;box-sizing:border-box;">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Location</label>
+        <div class="flex gap-2">
+          <input type="text" id="arLat" placeholder="Latitude" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
+          <input type="text" id="arLng" placeholder="Longitude" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
+          <button type="button" onclick="openLocationPicker()" class="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shrink-0 transition-colors"><i class="fas fa-map-marker-alt"></i></button>
         </div>
-        <div style="flex:1;">
-          <input type="text" id="arLng" placeholder="Longitude" readonly required style="width:100%;padding:10px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;background:#F9FAFB;box-sizing:border-box;">
-        </div>
-        <button type="button" onclick="openLocationPicker()" style="padding:10px 14px;background:#2563EB;color:#fff;border:none;border-radius:8px;cursor:pointer;"><i class="fas fa-map-marker-alt"></i></button>
       </div>
 
-      <button type="submit" id="btnSubmitRetailer" style="width:100%;padding:14px;background:linear-gradient(135deg,#8B0032,#A0003A);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;">
+      <button type="submit" id="btnSubmitRetailer" class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all mt-4">
         Save Retailer
       </button>
     </form>
@@ -284,14 +350,14 @@ body { overflow: hidden; }
 </div>
 
 <!-- Fullscreen Location Picker Map Overlay -->
-<div id="locationPickerOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:1000;flex-direction:column;">
-  <div style="padding:16px;background:linear-gradient(135deg,#8B0032,#A0003A);color:#fff;display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-size:16px;font-weight:700;">Pin Location</div>
-    <button onclick="closeLocationPicker()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button>
+<div id="locationPickerOverlay" class="hidden fixed inset-0 bg-white z-[1000] flex-col">
+  <div class="h-14 bg-gradient-to-r from-primary to-primary-light px-4 flex items-center justify-between text-white shadow-md">
+    <span class="font-extrabold text-sm">Pin Location</span>
+    <button onclick="closeLocationPicker()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"><i class="fas fa-times"></i></button>
   </div>
-  <div id="pickerMap" style="flex:1;width:100%;"></div>
-  <div style="padding:16px;background:#fff;box-shadow:0 -4px 12px rgba(0,0,0,0.1);">
-    <button onclick="confirmLocation()" style="width:100%;padding:14px;background:#16A34A;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;">
+  <div id="pickerMap" class="flex-1 w-full"></div>
+  <div class="p-4 bg-white border-t border-slate-100 shadow-2xl">
+    <button onclick="confirmLocation()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-base font-bold transition-all shadow-lg shadow-green-600/25">
       Confirm Location
     </button>
   </div>
@@ -404,11 +470,29 @@ function loadDelivMarkers() {
 function switchTab(tab) {
   currentTab = tab;
   closeAllSheets();
-  document.getElementById('tabSales').classList.toggle('active', tab === 'sales');
-  document.getElementById('tabDelivery').classList.toggle('active', tab === 'delivery');
+  
+  const tabSales = document.getElementById('tabSales');
+  const tabDelivery = document.getElementById('tabDelivery');
+  
+  if (tab === 'sales') {
+    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
+    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
+  } else {
+    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
+    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
+  }
+  
   document.getElementById('tabLabel').textContent = tab === 'sales' ? 'Sales Mode' : 'Delivery Mode';
-  document.getElementById('legend-sales').style.display = tab === 'sales' ? 'block' : 'none';
-  document.getElementById('legend-delivery').style.display = tab === 'delivery' ? 'block' : 'none';
+  
+  const legendSales = document.getElementById('legend-sales');
+  const legendDelivery = document.getElementById('legend-delivery');
+  if (tab === 'sales') {
+    legendSales.classList.remove('hidden');
+    legendDelivery.classList.add('hidden');
+  } else {
+    legendSales.classList.add('hidden');
+    legendDelivery.classList.remove('hidden');
+  }
 
   if (tab === 'sales') {
     delivMarkers.forEach(m => mapInstance.removeLayer(m));
@@ -455,17 +539,17 @@ function renderProductList() {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const item = document.createElement('div');
-    item.className = 'product-item';
+    item.className = 'flex items-center justify-between gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100';
     item.innerHTML = `
-      <div class="product-icon"><i class="fas fa-egg" style="color:var(--primary-color);"></i></div>
-      <div class="product-info">
-        <div class="product-name">${p.name}</div>
-        <div class="product-price">${CURRENCY}${parseFloat(p.price).toLocaleString()} / ${p.unit_type}</div>
+      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0"><i class="fas fa-egg"></i></div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-bold text-slate-800 truncate">${p.name}</div>
+        <div class="text-[11px] text-slate-400 font-semibold">${CURRENCY}${parseFloat(p.price).toLocaleString()} / ${p.unit_type}</div>
       </div>
-      <div class="product-qty-wrap">
-        <button class="qty-btn" onclick="changeQty(${p.id}, -1, ${p.price})">−</button>
-        <input class="qty-input" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id}, ${p.price})">
-        <button class="qty-btn" onclick="changeQty(${p.id}, 1, ${p.price})">+</button>
+      <div class="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden shrink-0">
+        <button class="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-sm transition-colors" onclick="changeQty(${p.id}, -1, ${p.price})">−</button>
+        <input class="w-10 text-center text-xs font-bold text-slate-800 outline-none" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id}, ${p.price})">
+        <button class="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-sm transition-colors" onclick="changeQty(${p.id}, 1, ${p.price})">+</button>
       </div>`;
     container.appendChild(item);
   });
@@ -500,7 +584,7 @@ function placeOrder() {
   if (items.length === 0) { alert('Please select at least one product.'); return; }
 
   const btn = document.getElementById('btnPlaceOrder');
-  btn.textContent = 'Placing...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Placing...';
   btn.disabled = true;
 
   fetch('/egglandbd/api/orders.php', {
@@ -512,7 +596,7 @@ function placeOrder() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('<i class="fas fa-check-circle"></i> Order placed successfully!', 'success');
+      showToast('Order placed successfully!', 'success');
       // Update retailer in array
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r) { r.has_order = 1; r.order_id = data.order_id; }
@@ -522,7 +606,7 @@ function placeOrder() {
     }
   })
   .catch(() => alert('Network error. Please try again.'))
-  .finally(() => { btn.textContent = '<i class="fas fa-clipboard-list"></i> Place Order'; btn.disabled = false; });
+  .finally(() => { btn.innerHTML = '<i class="fas fa-clipboard-list mr-1.5"></i> Place Order'; btn.disabled = false; });
 }
 
 // ===== ORDER WARNING =====
@@ -540,8 +624,8 @@ function openOrderWarning(retailer) {
     if (data.items) {
       data.items.forEach(item => {
         const d = document.createElement('div');
-        d.className = 'del-item';
-        d.innerHTML = `<div><div class="del-item-name">${item.product_name}</div><div class="del-item-qty">Qty: ${item.qty} ${item.unit_type}</div></div><div class="del-item-price">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
+        d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
+        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
         container.appendChild(d);
       });
     }
@@ -568,16 +652,16 @@ function openReadySale(retailer) {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const d = document.createElement('div');
-    d.className = 'ready-sale-item';
+    d.className = 'flex items-center justify-between gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100';
     d.innerHTML = `
-      <div class="rs-product-info">
-        <div class="rs-product-name">${p.name}</div>
-        <div class="rs-product-unit">${p.unit_type}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-bold text-slate-800 truncate">${p.name}</div>
+        <div class="text-[10px] text-slate-400 font-semibold">${p.unit_type}</div>
       </div>
-      <div class="rs-inputs">
-        <input class="rs-input" placeholder="Qty" id="rs_qty_${p.id}" value="" type="number" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
-        <span class="rs-sep">×</span>
-        <input class="rs-input" placeholder="Price" id="rs_price_${p.id}" value="${p.price}" type="number" min="0" oninput="updateRSTotal(${p.id})">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <input class="w-14 px-2 py-1 text-xs text-center border border-slate-200 rounded-lg text-slate-800 outline-none font-bold" placeholder="Qty" id="rs_qty_${p.id}" value="" type="number" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
+        <span class="text-slate-400 text-xs">×</span>
+        <input class="w-16 px-2 py-1 text-xs text-center border border-slate-200 rounded-lg text-slate-800 outline-none font-bold" placeholder="Price" id="rs_price_${p.id}" value="${p.price}" type="number" min="0" oninput="updateRSTotal(${p.id})">
       </div>`;
     container.appendChild(d);
   });
@@ -593,6 +677,7 @@ function updateRSTotal(productId, defaultPrice) {
   updateRSTotalDisplay();
 }
 
+// ===== READY SALE TOTAL =====
 function updateRSTotalDisplay() {
   let total = 0;
   Object.values(readySaleItems).forEach(i => total += i.qty * i.price);
@@ -612,7 +697,7 @@ function confirmReadySale() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('<i class="fas fa-check-circle"></i> Sale recorded!', 'success');
+      showToast('Sale recorded!', 'success');
     } else {
       alert('Error: ' + (data.message || 'Failed'));
     }
@@ -641,8 +726,8 @@ function openDelivery(retailer) {
         const amt = item.qty * item.price;
         total += amt;
         const d = document.createElement('div');
-        d.className = 'del-item';
-        d.innerHTML = `<div><div class="del-item-name">${item.product_name}</div><div class="del-item-qty">Qty: ${item.qty} ${item.unit_type}</div></div><div class="del-item-price">${CURRENCY}${amt.toLocaleString()}</div>`;
+        d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
+        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${amt.toLocaleString()}</div>`;
         container.appendChild(d);
       });
     }
@@ -663,8 +748,7 @@ function updateDelivery(status) {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      const icons = {completed:'<i class="fas fa-check-circle"></i>', due:'<i class="fas fa-clock"></i>', partial:'<i class="fas fa-box"></i>', cancelled:'<i class="fas fa-times-circle"></i>'};
-      showToast(`${icons[status] || ''} Delivery marked as ${status}!`, 'success');
+      showToast(`Delivery marked as ${status}!`, 'success');
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r && (status === 'completed' || status === 'cancelled')) r.has_delivery = 0;
       loadDelivMarkers();
@@ -678,10 +762,13 @@ function updateDelivery(status) {
 // ===== TOAST =====
 function showToast(msg, type = 'success') {
   const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:${parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h') || '64') + 20}px;left:50%;transform:translateX(-50%);background:${type==='success'?'#16A34A':'#DC2626'};color:#fff;padding:12px 20px;border-radius:24px;font-size:14px;font-weight:700;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,0.3);white-space:nowrap;`;
-  t.textContent = msg;
+  t.className = `fixed bottom-20 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-full text-xs font-bold z-[1000] shadow-xl whitespace-nowrap transition-all duration-300 ${type==='success'?'bg-green-600':'bg-red-600'}`;
+  t.innerHTML = `${type==='success'?'<i class="fas fa-check-circle mr-1"></i>':'<i class="fas fa-times-circle mr-1"></i>'} ${msg}`;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+  setTimeout(() => {
+    t.classList.add('opacity-0');
+    setTimeout(() => t.remove(), 300);
+  }, 2500);
 }
 
 function reloadMap() {
@@ -707,7 +794,8 @@ function openAddRetailerSheet() {
 }
 
 function openLocationPicker() {
-  document.getElementById('locationPickerOverlay').style.display = 'flex';
+  document.getElementById('locationPickerOverlay').classList.remove('hidden');
+  document.getElementById('locationPickerOverlay').classList.add('flex');
   
   let initialLat = MAP_LAT;
   let initialLng = MAP_LNG;
@@ -725,8 +813,8 @@ function openLocationPicker() {
   }
 
   if (!pickerMapInstance) {
-    pickerMapInstance = L.map('pickerMap').setView([initialLat, initialLng], 15);
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    pickerMapInstance = L.map('pickerMap', { zoomControl: true, attributionControl: false }).setView([initialLat, initialLng], 15);
+    L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
       maxZoom: 20,
       subdomains: ['mt0','mt1','mt2','mt3']
     }).addTo(pickerMapInstance);
@@ -747,7 +835,8 @@ function openLocationPicker() {
 }
 
 function closeLocationPicker() {
-  document.getElementById('locationPickerOverlay').style.display = 'none';
+  document.getElementById('locationPickerOverlay').classList.remove('flex');
+  document.getElementById('locationPickerOverlay').classList.add('hidden');
 }
 
 function confirmLocation() {
@@ -786,7 +875,7 @@ function submitAddRetailer(e) {
   
   const btn = document.getElementById('btnSubmitRetailer');
   const ogText = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Saving...';
   btn.disabled = true;
   
   fetch('/egglandbd/api/agent_add_retailer.php', {
@@ -800,7 +889,7 @@ function submitAddRetailer(e) {
     
     if (data.success) {
       closeAllSheets();
-      showToast('<i class="fas fa-check-circle"></i> Retailer added successfully!', 'success');
+      showToast('Retailer added successfully!', 'success');
       
       const r = data.retailer;
       RETAILERS.push(r);

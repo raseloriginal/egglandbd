@@ -4,8 +4,17 @@ $whitelist = array('127.0.0.1', '::1', 'localhost');
 $is_local = false;
 if (isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], $whitelist)) {
     $is_local = true;
-} elseif (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) {
-    $is_local = true;
+} elseif (isset($_SERVER['HTTP_HOST'])) {
+    $host = explode(':', $_SERVER['HTTP_HOST'])[0];
+    if (
+        strpos($host, 'localhost') !== false ||
+        strpos($host, '127.0.0.1') !== false ||
+        strpos($host, '192.168.') === 0 ||
+        strpos($host, '10.') === 0 ||
+        strpos($host, '172.') === 0
+    ) {
+        $is_local = true;
+    }
 }
 
 if ($is_local) {
