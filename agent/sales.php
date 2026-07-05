@@ -24,7 +24,7 @@ $currency = getSetting('currency_symbol', '৳');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <meta name="theme-color" content="#8B0032">
-    <title>Sales — Eggland Bangladesh</title>
+    <title>বিক্রি — এগল্যান্ড বাংলাদেশ</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -58,8 +58,8 @@ $currency = getSetting('currency_symbol', '৳');
         <div class="flex items-center gap-3 w-full">
             <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
             <div class="flex-1">
-                <h1 class="text-sm font-bold leading-tight">Sales History</h1>
-                <p class="text-[10px] text-white/60 font-semibold"><?= count($sales) ?> Records</p>
+                <h1 class="text-sm font-bold leading-tight">বিক্রির ইতিহাস</h1>
+                <p class="text-[10px] text-white/60 font-semibold"><?= count($sales) ?> টি রেকর্ড</p>
             </div>
             <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="history.back()">
                 <i class="fas fa-arrow-left text-sm"></i>
@@ -73,15 +73,15 @@ $currency = getSetting('currency_symbol', '৳');
                 <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg mb-3">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h2 class="text-base font-bold text-slate-800">No Sales Yet</h2>
-                <p class="text-xs text-slate-400 mt-1">Your sales and delivery history will appear here.</p>
+                <h2 class="text-base font-bold text-slate-800">এখনো কোনো বিক্রি নেই</h2>
+                <p class="text-xs text-slate-400 mt-1">আপনার সব বিক্রি এবং ডেলিভারির তথ্য এখানে দেখতে পাবেন।</p>
             </div>
         <?php else: ?>
             <div class="space-y-3">
                 <?php foreach ($sales as $s): ?>
                     <?php 
                         $typeBg = $s['type'] === 'ready_sale' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600';
-                        $typeLabel = $s['type'] === 'ready_sale' ? 'Ready Sale' : 'Order Delivery';
+                        $typeLabel = $s['type'] === 'ready_sale' ? 'সরাসরি বিক্রি' : 'অর্ডার ডেলিভারি';
                         
                         $statusClass = 'text-slate-400';
                         $statusBg = 'bg-slate-50';
@@ -112,15 +112,15 @@ $currency = getSetting('currency_symbol', '৳');
                         </div>
                         <div class="flex justify-between items-center text-xs">
                             <span class="inline-flex items-center gap-1.5 font-bold px-2.5 py-1 rounded-full text-[11px] <?= $statusClass ?> <?= $statusBg ?>">
-                                <?php if ($s['status'] === 'completed'): ?><i class="fas fa-check-circle"></i> Completed
-                                <?php elseif ($s['status'] === 'pending'): ?><i class="fas fa-clock"></i> Pending
-                                <?php elseif ($s['status'] === 'due'): ?><i class="fas fa-exclamation-circle"></i> Due
-                                <?php elseif ($s['status'] === 'partial'): ?><i class="fas fa-box-open"></i> Partial
-                                <?php elseif ($s['status'] === 'cancelled'): ?><i class="fas fa-times-circle"></i> Cancelled
+                                <?php if ($s['status'] === 'completed'): ?><i class="fas fa-check-circle"></i> সম্পন্ন
+                                <?php elseif ($s['status'] === 'pending'): ?><i class="fas fa-clock"></i> চলমান
+                                <?php elseif ($s['status'] === 'due'): ?><i class="fas fa-exclamation-circle"></i> বকেয়া
+                                <?php elseif ($s['status'] === 'partial'): ?><i class="fas fa-box-open"></i> আংশিক
+                                <?php elseif ($s['status'] === 'cancelled'): ?><i class="fas fa-times-circle"></i> বাতিল
                                 <?php endif; ?>
                             </span>
                             <?php if ($s['amount_collected'] > 0 && $s['status'] !== 'completed'): ?>
-                                <span class="text-slate-500 font-medium">Collected: <strong class="text-slate-800 font-bold"><?= $currency ?><?= number_format($s['amount_collected'], 0) ?></strong></span>
+                                <span class="text-slate-500 font-medium">কালেকশন: <strong class="text-slate-800 font-bold"><?= $currency ?><?= number_format($s['amount_collected'], 0) ?></strong></span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -133,23 +133,23 @@ $currency = getSetting('currency_symbol', '৳');
     <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
         <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-home"></i></span>
-            <span>Home</span>
+            <span>হোম</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-            <span>Map</span>
+            <span>ম্যাপ</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-            <span>Retailers</span>
+            <span>রিটেইলার</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-book"></i></span>
-            <span>Ledger</span>
+            <span>লেনদেন</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-            <span>Sales</span>
+            <span>বিক্রি</span>
         </a>
     </nav>
 </body>

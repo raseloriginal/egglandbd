@@ -28,7 +28,7 @@ foreach ($transactions as $t) {
 }
 
 $netBalance = abs($totalDeposits - $totalLots);
-$balanceLabel = $totalLots > $totalDeposits ? 'You Owe' : 'Your Balance';
+$balanceLabel = $totalLots > $totalDeposits ? 'বকেয়া দিতে হবে' : 'ব্যালেন্স জমা';
 $balanceClass = $totalLots > $totalDeposits ? 'text-red-500 bg-red-50' : 'text-green-600 bg-green-50';
 
 $currency = getSetting('currency_symbol', '৳');
@@ -39,7 +39,7 @@ $currency = getSetting('currency_symbol', '৳');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <meta name="theme-color" content="#8B0032">
-    <title>Ledger — Eggland Bangladesh</title>
+    <title>লেনদেন — এগল্যান্ড বাংলাদেশ</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -73,8 +73,8 @@ $currency = getSetting('currency_symbol', '৳');
         <div class="flex items-center gap-3 w-full">
             <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
             <div class="flex-1">
-                <h1 class="text-sm font-bold leading-tight">Ledger</h1>
-                <p class="text-[10px] text-white/60 font-semibold">Account Statement</p>
+                <h1 class="text-sm font-bold leading-tight">লেনদেন</h1>
+                <p class="text-[10px] text-white/60 font-semibold">হিসাব-নিকাশ</p>
             </div>
             <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="history.back()">
                 <i class="fas fa-arrow-left text-sm"></i>
@@ -90,26 +90,26 @@ $currency = getSetting('currency_symbol', '৳');
             
             <div class="grid grid-cols-2 gap-2 border-t border-white/20 pt-4 mt-6">
                 <div>
-                    <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider">Total Deposits</p>
+                    <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider">মোট জমা</p>
                     <p class="text-base font-bold text-white mt-1"><?= $currency ?><?= number_format($totalDeposits, 0) ?></p>
                 </div>
                 <div class="border-l border-white/20">
-                    <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider">Lots Delivered</p>
+                    <p class="text-[10px] font-bold text-white/60 uppercase tracking-wider">ডেলিভারি নেওয়া মালামাল</p>
                     <p class="text-base font-bold text-white mt-1"><?= $currency ?><?= number_format($totalLots, 0) ?></p>
                 </div>
             </div>
         </div>
         
         <div>
-            <h2 class="text-sm font-extrabold text-slate-900 px-1 mb-3">Recent Transactions</h2>
+            <h2 class="text-sm font-extrabold text-slate-900 px-1 mb-3">সাম্প্রতিক লেনদেন</h2>
 
             <?php if (empty($transactions)): ?>
                 <div class="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100/50 flex flex-col items-center">
                     <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg mb-3">
                         <i class="fas fa-book"></i>
                     </div>
-                    <h3 class="text-base font-bold text-slate-800">No Records Found</h3>
-                    <p class="text-xs text-slate-400 mt-1">Your financial transactions will appear here.</p>
+                    <h3 class="text-base font-bold text-slate-800">কোনো তথ্য পাওয়া যায়নি</h3>
+                    <p class="text-xs text-slate-400 mt-1">আপনার সমস্ত আর্থিক লেনদেনের বিবরণ এখানে দেখতে পাবেন।</p>
                 </div>
             <?php else: ?>
                 <div class="space-y-3">
@@ -118,7 +118,7 @@ $currency = getSetting('currency_symbol', '৳');
                             $isDeposit = $tx['type'] === 'deposit';
                             $iconBg = $isDeposit ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600';
                             $icon = $isDeposit ? 'fa-money-bill-wave' : 'fa-box';
-                            $title = $isDeposit ? 'Deposit' : 'Lot Delivery';
+                            $title = $isDeposit ? 'টাকা জমা' : 'মাল ডেলিভারি';
                             $amtClass = $isDeposit ? 'text-green-600' : 'text-blue-600';
                             $prefix = $isDeposit ? '+' : '−';
                         ?>
@@ -160,23 +160,23 @@ $currency = getSetting('currency_symbol', '৳');
     <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
         <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-home"></i></span>
-            <span>Home</span>
+            <span>হোম</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-            <span>Map</span>
+            <span>ম্যাপ</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-            <span>Retailers</span>
+            <span>রিটেইলার</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-book"></i></span>
-            <span>Ledger</span>
+            <span>লেনদেন</span>
         </a>
         <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
             <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-            <span>Sales</span>
+            <span>বিক্রি</span>
         </a>
     </nav>
 </body>

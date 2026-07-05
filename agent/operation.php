@@ -39,7 +39,7 @@ $currency = getSetting('currency_symbol', '৳');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#8B0032">
-<title>Operation Map — Eggland Bangladesh</title>
+<title>অপারেশন ম্যাপ — এগল্যান্ড বাংলাদেশ</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -102,8 +102,8 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="flex items-center gap-3 w-full">
     <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
     <div class="flex-grow">
-      <h1 class="text-sm font-bold leading-tight">Operation Map</h1>
-      <p class="text-[10px] text-white/60 font-semibold" id="tabLabel">Sales Mode</p>
+      <h1 class="text-sm font-bold leading-tight">অপারেশন ম্যাপ</h1>
+      <p class="text-[10px] text-white/60 font-semibold" id="tabLabel">বিক্রি মোড</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="openAddRetailerSheet()">
       <i class="fas fa-plus text-sm"></i>
@@ -120,10 +120,10 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Tab Bar -->
 <div class="flex bg-white border-b border-slate-100 fixed top-14 left-0 right-0 h-12 z-[250] shadow-sm">
   <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary">
-    <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> Sales
+    <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> বিক্রি
   </button>
   <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent">
-    <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> Delivery
+    <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> ডেলিভারি
   </button>
 </div>
 
@@ -133,12 +133,12 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Map Legend -->
 <div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
   <div id="legend-sales">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>No order</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>Has order</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>অর্ডার নেই</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>অর্ডার আছে</div>
   </div>
   <div id="legend-delivery" class="hidden">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>No delivery</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>Pending delivery</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
   </div>
 </div>
 
@@ -146,23 +146,23 @@ $currency = getSetting('currency_symbol', '৳');
 <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-[250] flex items-center justify-around px-2 shadow-lg">
   <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
     <span class="text-lg"><i class="fas fa-home"></i></span>
-    <span>Home</span>
+    <span>হোম</span>
   </a>
   <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
     <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-    <span>Map</span>
+    <span>ম্যাপ</span>
   </a>
   <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
     <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-    <span>Retailers</span>
+    <span>রিটেইলার</span>
   </a>
   <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
     <span class="text-lg"><i class="fas fa-book"></i></span>
-    <span>Ledger</span>
+    <span>লেনদেন</span>
   </a>
   <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
     <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-    <span>Sales</span>
+    <span>বিক্রি</span>
   </a>
 </nav>
 
@@ -175,8 +175,8 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900" id="soRetailerName">New Order</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="soRetailerAddr">Retailer Address</p>
+      <h3 class="text-base font-extrabold text-slate-900" id="soRetailerName">নতুন অর্ডার</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="soRetailerAddr">রিটেইলারের ঠিকানা</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
@@ -184,22 +184,22 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="bg-primary/5 rounded-2xl p-4 flex items-center gap-3 border border-primary/10">
       <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-warehouse"></i></div>
       <div>
-        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="soRName2">Retailer Name</h4>
-        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="soRPhone">Phone</p>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="soRName2">রিটেইলারের নাম</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="soRPhone">ফোন</p>
       </div>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Select Products & Quantity</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">পণ্য ও পরিমাণ সিলেক্ট করুন</div>
     <div class="space-y-3" id="orderProductList">
       <!-- Populated by JS -->
     </div>
     <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">Total Amount</span>
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
       <span class="text-lg font-black text-primary" id="orderTotalVal"><?= $currency ?>0</span>
     </div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white shrink-0">
     <button class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98]" id="btnPlaceOrder" onclick="placeOrder()">
-      <i class="fas fa-clipboard-list mr-1.5"></i> Place Order
+      <i class="fas fa-clipboard-list mr-1.5"></i> অর্ডার কনফার্ম করুন
     </button>
   </div>
 </div>
@@ -209,22 +209,22 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900"><i class="fas fa-exclamation-triangle text-amber-500 mr-1.5"></i> Order Already Exists</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="warnRetailerName">This retailer has a pending order</p>
+      <h3 class="text-base font-extrabold text-slate-900"><i class="fas fa-exclamation-triangle text-amber-500 mr-1.5"></i> অর্ডার ইতিমধ্যে দেওয়া আছে</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="warnRetailerName">এই রিটেইলারের একটি অর্ডার পেন্ডিং আছে</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
     <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-xs font-semibold flex gap-2.5">
       <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
-      <span id="warnText">This retailer already has a pending order. Do you want to add another order?</span>
+      <span id="warnText">এই রিটেইলারের একটি অর্ডার ইতিমধ্যে পেন্ডিং আছে। আপনি কি আরেকটি অর্ডার করতে চান?</span>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Existing order items:</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">চলতি অর্ডারের মালামাল:</div>
     <div id="existingOrderItems" class="space-y-2.5"></div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white flex gap-3 shrink-0">
-    <button onclick="closeAllSheets()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition-all">Cancel</button>
-    <button onclick="proceedNewOrder()" class="flex-1 py-3.5 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all">Order Again</button>
+    <button onclick="closeAllSheets()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition-all">বাতিল করুন</button>
+    <button onclick="proceedNewOrder()" class="flex-1 py-3.5 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all">আবার অর্ডার করুন</button>
   </div>
 </div>
 
@@ -233,8 +233,8 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900" id="rsRetailerName">Ready Sale</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="rsRetailerAddr">Instant sale to retailer</p>
+      <h3 class="text-base font-extrabold text-slate-900" id="rsRetailerName">সরাসরি বিক্রি</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="rsRetailerAddr">রিটেইলারের কাছে সরাসরি বিক্রি</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
@@ -242,22 +242,22 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="bg-green-50 rounded-2xl p-4 flex items-center gap-3 border border-green-100">
       <div class="w-10 h-10 rounded-xl bg-green-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-bolt"></i></div>
       <div>
-        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="rsRName2">Retailer Name</h4>
-        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="rsRPhone">Phone</p>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="rsRName2">রিটেইলারের নাম</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="rsRPhone">ফোন</p>
       </div>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Products — Qty & Price</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">পণ্য — পরিমাণ ও দাম</div>
     <div class="space-y-3" id="readySaleList">
       <!-- Populated by JS -->
     </div>
     <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">Total Amount</span>
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
       <span class="text-lg font-black text-green-600" id="rsTotalVal"><?= $currency ?>0</span>
     </div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white shrink-0">
     <button onclick="confirmReadySale()" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-base font-bold shadow-lg shadow-green-600/25 transition-all active:scale-[0.98]">
-      <i class="fas fa-bolt mr-1.5"></i> Complete Sale
+      <i class="fas fa-bolt mr-1.5"></i> বিক্রি সম্পন্ন করুন
     </button>
   </div>
 </div>
@@ -267,8 +267,8 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900" id="delRetailerName">Delivery</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="delRetailerAddr">Pending delivery</p>
+      <h3 class="text-base font-extrabold text-slate-900" id="delRetailerName">ডেলিভারি</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="delRetailerAddr">ডেলিভারি বাকি আছে</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
@@ -276,29 +276,29 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="bg-blue-50 rounded-2xl p-4 flex items-center gap-3 border border-blue-100">
       <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-shipping-fast"></i></div>
       <div>
-        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="delRName2">Retailer Name</h4>
-        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="delRPhone">Phone</p>
+        <h4 class="text-sm font-bold text-slate-900 leading-snug" id="delRName2">রিটেইলারের নাম</h4>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="delRPhone">ফোন</p>
       </div>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Items to Deliver</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ডেলিভারি করার মালামাল</div>
     <div class="space-y-2" id="deliveryItemsList"></div>
     <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">Total</span>
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
       <span class="text-lg font-black text-slate-900" id="delTotalVal"><?= $currency ?>0</span>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2">Update Delivery Status</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2">ডেলিভারি স্ট্যাটাস আপডেট করুন</div>
     <div class="grid grid-cols-2 gap-3">
       <button class="py-3 bg-green-50 text-green-600 hover:bg-green-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-green-200/50 transition-colors" onclick="updateDelivery('completed')">
-        <i class="fas fa-check-circle"></i> Complete
+        <i class="fas fa-check-circle"></i> সম্পন্ন
       </button>
       <button class="py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-red-200/50 transition-colors" onclick="updateDelivery('due')">
-        <i class="fas fa-clock"></i> Due
+        <i class="fas fa-clock"></i> বকেয়া
       </button>
       <button class="py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-blue-200/50 transition-colors" onclick="updateDelivery('partial')">
-        <i class="fas fa-boxes"></i> Partial
+        <i class="fas fa-boxes"></i> আংশিক
       </button>
       <button class="py-3 bg-slate-50 text-slate-500 hover:bg-slate-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-slate-200/50 transition-colors" onclick="updateDelivery('cancelled')">
-        <i class="fas fa-times-circle"></i> Cancel
+        <i class="fas fa-times-circle"></i> বাতিল
       </button>
     </div>
   </div>
@@ -309,41 +309,41 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900">Add New Retailer</h3>
-      <p class="text-xs text-slate-400 font-semibold">Register a new retailer in your area</p>
+      <h3 class="text-base font-extrabold text-slate-900">নতুন রিটেইলার</h3>
+      <p class="text-xs text-slate-400 font-semibold">আপনার এলাকায় নতুন রিটেইলার রেজিস্ট্রেশন করুন</p>
     </div>
     <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
     <form id="addRetailerForm" onsubmit="submitAddRetailer(event)" class="space-y-4">
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Retailer Name *</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">রিটেইলারের নাম *</label>
         <input type="text" id="arName" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Shop Name (Optional)</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">দোকানের নাম (ঐচ্ছিক)</label>
         <input type="text" id="arShopName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Phone Number *</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">ফোন নাম্বার *</label>
         <input type="tel" id="arPhone" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Retailer Image (Optional)</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">রিটেইলারের ছবি (ঐচ্ছিক)</label>
         <input type="file" id="arImage" accept="image/*" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none transition-all file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/5 file:text-primary hover:file:bg-primary/10">
       </div>
       
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Location</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">লোকেশন</label>
         <div class="flex gap-2">
-          <input type="text" id="arLat" placeholder="Latitude" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
-          <input type="text" id="arLng" placeholder="Longitude" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
+          <input type="text" id="arLat" placeholder="অক্ষাংশ (Lat)" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
+          <input type="text" id="arLng" placeholder="দ্রাঘিমাংশ (Lng)" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
           <button type="button" onclick="openLocationPicker()" class="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shrink-0 transition-colors"><i class="fas fa-map-marker-alt"></i></button>
         </div>
       </div>
 
       <button type="submit" id="btnSubmitRetailer" class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all mt-4">
-        Save Retailer
+        রিটেইলার সেভ করুন
       </button>
     </form>
   </div>
@@ -352,13 +352,13 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Fullscreen Location Picker Map Overlay -->
 <div id="locationPickerOverlay" class="hidden fixed inset-0 bg-white z-[1000] flex-col">
   <div class="h-14 bg-gradient-to-r from-primary to-primary-light px-4 flex items-center justify-between text-white shadow-md">
-    <span class="font-extrabold text-sm">Pin Location</span>
+    <span class="font-extrabold text-sm">লোকেশন পিন করুন</span>
     <button onclick="closeLocationPicker()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"><i class="fas fa-times"></i></button>
   </div>
   <div id="pickerMap" class="flex-1 w-full"></div>
   <div class="p-4 bg-white border-t border-slate-100 shadow-2xl">
     <button onclick="confirmLocation()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-base font-bold transition-all shadow-lg shadow-green-600/25">
-      Confirm Location
+      লোকেশন কনফার্ম করুন
     </button>
   </div>
 </div>
@@ -482,7 +482,7 @@ function switchTab(tab) {
     tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
   }
   
-  document.getElementById('tabLabel').textContent = tab === 'sales' ? 'Sales Mode' : 'Delivery Mode';
+  document.getElementById('tabLabel').textContent = tab === 'sales' ? 'বিক্রি মোড' : 'ডেলিভারি মোড';
   
   const legendSales = document.getElementById('legend-sales');
   const legendDelivery = document.getElementById('legend-delivery');
@@ -529,7 +529,7 @@ function openNewOrder(retailer) {
   document.getElementById('soRetailerName').textContent = retailer.name;
   document.getElementById('soRetailerAddr').textContent = retailer.address || retailer.area || '';
   document.getElementById('soRName2').textContent = retailer.name;
-  document.getElementById('soRPhone').textContent = retailer.phone || 'No phone';
+  document.getElementById('soRPhone').textContent = retailer.phone || 'ফোন নম্বর নেই';
   renderProductList();
   openSheet('sheetNewOrder');
 }
@@ -581,10 +581,10 @@ function updateOrderTotal() {
 
 function placeOrder() {
   const items = Object.entries(orderItems).map(([pid, item]) => ({product_id: pid, qty: item.qty, price: item.price}));
-  if (items.length === 0) { alert('Please select at least one product.'); return; }
+  if (items.length === 0) { alert('অনুগ্রহ করে অন্তত একটি পণ্য সিলেক্ট করুন।'); return; }
 
   const btn = document.getElementById('btnPlaceOrder');
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Placing...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> অর্ডার প্লেস হচ্ছে...';
   btn.disabled = true;
 
   fetch('/egglandbd/api/orders.php', {
@@ -596,24 +596,24 @@ function placeOrder() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('Order placed successfully!', 'success');
+      showToast('অর্ডার সফলভাবে সম্পন্ন হয়েছে!', 'success');
       // Update retailer in array
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r) { r.has_order = 1; r.order_id = data.order_id; }
       loadSalesMarkers();
     } else {
-      alert('Error: ' + (data.message || 'Failed to place order'));
+      alert('ত্রুটি: ' + (data.message || 'অর্ডার করতে ব্যর্থ হয়েছে'));
     }
   })
-  .catch(() => alert('Network error. Please try again.'))
-  .finally(() => { btn.innerHTML = '<i class="fas fa-clipboard-list mr-1.5"></i> Place Order'; btn.disabled = false; });
+  .catch(() => alert('নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।'))
+  .finally(() => { btn.innerHTML = '<i class="fas fa-clipboard-list mr-1.5"></i> অর্ডার কনফার্ম করুন'; btn.disabled = false; });
 }
 
 // ===== ORDER WARNING =====
 function openOrderWarning(retailer) {
   currentRetailer = retailer;
-  document.getElementById('warnRetailerName').textContent = retailer.name + ' — Existing Order';
-  document.getElementById('warnText').textContent = `${retailer.name} already has a pending order. Do you want to place another order?`;
+  document.getElementById('warnRetailerName').textContent = retailer.name + ' — চলতি অর্ডার';
+  document.getElementById('warnText').textContent = `${retailer.name} এর একটি পেন্ডিং অর্ডার ইতিমধ্যে আছে। আপনি কি আরেকটি অর্ডার করতে চান?`;
 
   // Fetch existing order items
   fetch('/egglandbd/api/orders.php?action=get_items&order_id=' + retailer.order_id)
@@ -625,7 +625,7 @@ function openOrderWarning(retailer) {
       data.items.forEach(item => {
         const d = document.createElement('div');
         d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
-        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
+        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
         container.appendChild(d);
       });
     }
@@ -643,10 +643,10 @@ function proceedNewOrder() {
 function openReadySale(retailer) {
   currentRetailer = retailer;
   readySaleItems = {};
-  document.getElementById('rsRetailerName').textContent = 'Ready Sale — ' + retailer.name;
+  document.getElementById('rsRetailerName').textContent = 'সরাসরি বিক্রি — ' + retailer.name;
   document.getElementById('rsRetailerAddr').textContent = retailer.address || '';
   document.getElementById('rsRName2').textContent = retailer.name;
-  document.getElementById('rsRPhone').textContent = retailer.phone || 'No phone';
+  document.getElementById('rsRPhone').textContent = retailer.phone || 'ফোন নম্বর নেই';
 
   const container = document.getElementById('readySaleList');
   container.innerHTML = '';
@@ -686,7 +686,7 @@ function updateRSTotalDisplay() {
 
 function confirmReadySale() {
   const items = Object.entries(readySaleItems).map(([pid, i]) => ({product_id: pid, qty: i.qty, price: i.price}));
-  if (items.length === 0) { alert('Please enter at least one product with quantity.'); return; }
+  if (items.length === 0) { alert('অনুগ্রহ করে পণ্যের পরিমাণ দিন।'); return; }
 
   fetch('/egglandbd/api/deliveries.php', {
     method: 'POST',
@@ -697,19 +697,19 @@ function confirmReadySale() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('Sale recorded!', 'success');
+      showToast('বিক্রি সম্পন্ন হয়েছে!', 'success');
     } else {
-      alert('Error: ' + (data.message || 'Failed'));
+      alert('ত্রুটি: ' + (data.message || 'ব্যর্থ হয়েছে'));
     }
   })
-  .catch(() => alert('Network error.'));
+  .catch(() => alert('নেটওয়ার্ক সমস্যা।'));
 }
 
 // ===== DELIVERY =====
 function openDelivery(retailer) {
   currentRetailer = retailer;
   currentDeliveryId = retailer.delivery_id;
-  document.getElementById('delRetailerName').textContent = 'Deliver to ' + retailer.name;
+  document.getElementById('delRetailerName').textContent = retailer.name + ' কে ডেলিভারি করুন';
   document.getElementById('delRetailerAddr').textContent = retailer.address || '';
   document.getElementById('delRName2').textContent = retailer.name;
   document.getElementById('delRPhone').textContent = retailer.phone || '';
@@ -727,7 +727,7 @@ function openDelivery(retailer) {
         total += amt;
         const d = document.createElement('div');
         d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
-        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${amt.toLocaleString()}</div>`;
+        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${amt.toLocaleString()}</div>`;
         container.appendChild(d);
       });
     }
@@ -748,15 +748,19 @@ function updateDelivery(status) {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast(`Delivery marked as ${status}!`, 'success');
+      let statusBn = 'সম্পন্ন';
+      if (status === 'cancelled') statusBn = 'বাতিল';
+      else if (status === 'due') statusBn = 'বকেয়া';
+      else if (status === 'partial') statusBn = 'আংশিক';
+      showToast(`ডেলিভারি ${statusBn} হিসেবে চিহ্নিত করা হয়েছে!`, 'success');
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r && (status === 'completed' || status === 'cancelled')) r.has_delivery = 0;
       loadDelivMarkers();
     } else {
-      alert('Error: ' + (data.message || 'Update failed'));
+      alert('ত্রুটি: ' + (data.message || 'আপডেট করা যায়নি'));
     }
   })
-  .catch(() => alert('Network error.'));
+  .catch(() => alert('নেটওয়ার্ক সমস্যা।'));
 }
 
 // ===== TOAST =====
@@ -859,7 +863,7 @@ function submitAddRetailer(e) {
   const imageFile = document.getElementById('arImage').files[0];
   
   if (!lat || !lng) {
-    alert("Please select a location on the map.");
+    alert("ম্যাপ থেকে দয়া করে একটি লোকেশন সিলেক্ট করুন।");
     return;
   }
   
@@ -889,7 +893,7 @@ function submitAddRetailer(e) {
     
     if (data.success) {
       closeAllSheets();
-      showToast('Retailer added successfully!', 'success');
+      showToast('রিটেইলার সফলভাবে যুক্ত করা হয়েছে!', 'success');
       
       const r = data.retailer;
       RETAILERS.push(r);
@@ -899,13 +903,13 @@ function submitAddRetailer(e) {
         loadDelivMarkers();
       }
     } else {
-      alert("Error: " + data.message);
+      alert("ত্রুটি: " + data.message);
     }
   })
   .catch(err => {
     btn.innerHTML = ogText;
     btn.disabled = false;
-    alert("Network error.");
+    alert("নেটওয়ার্ক সমস্যা।");
   });
 }
 
