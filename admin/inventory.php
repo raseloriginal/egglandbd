@@ -28,6 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $pdo->beginTransaction();
             try {
+                // Insert parent lot
+                $pdo->prepare("INSERT INTO warehouse_lots (provider_id) VALUES (?)")->execute([$provider_id]);
+                $lot_id = $pdo->lastInsertId();
+                
                 $addedCount = 0;
                 foreach ($items as $item) {
                     $product_id = (int)($item['product_id'] ?? 0);
@@ -46,10 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old_buying_price = $prod['buying_price'];
                     $old_selling_price = $prod['price'];
                     
-                    // Insert into warehouse_lots
-                    $pdo->prepare("INSERT INTO warehouse_lots (provider_id, product_id, qty, buying_price, selling_price) VALUES (?, ?, ?, ?, ?)")
-                        ->execute([$provider_id, $product_id, $qty, $buying_price, $selling_price]);
-                    $lot_id = $pdo->lastInsertId();
+                    // Insert into warehouse_lot_items
+                    $pdo->prepare("INSERT INTO warehouse_lot_items (warehouse_lot_id, product_id, qty, original_qty, buying_price, selling_price) VALUES (?, ?, ?, ?, ?, ?)")
+                        ->execute([$lot_id, $product_id, $qty, $qty, $buying_price, $selling_price]);
                     
                     // Update product prices
                     $pdo->prepare("UPDATE products SET buying_price = ?, price = ? WHERE id = ?")
@@ -70,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($addedCount > 0) {
                     $pdo->commit();
-                    $success = "Warehouse lot with $addedCount product(s) added successfully.";
+                    $success = "Warehouse lot #$lot_id with $addedCount product(s) added successfully.";
                 } else {
                     $pdo->rollBack();
                     $error = 'No valid products were added to the lot.';
@@ -91,13 +94,15 @@ $inventory = $pdo->query("
 
 $providers = $pdo->query("SELECT * FROM providers WHERE status='active' ORDER BY name")->fetchAll();
 
+// Fetch items under warehouse lots
 $recent_lots = $pdo->query("
-    SELECT w.*, p.name as provider_name, pr.name as product_name, pr.unit_type
-    FROM warehouse_lots w
+    SELECT wli.*, w.id as lot_id, p.name as provider_name, pr.name as product_name, pr.unit_type, w.created_at
+    FROM warehouse_lot_items wli
+    JOIN warehouse_lots w ON wli.warehouse_lot_id = w.id
     JOIN providers p ON w.provider_id = p.id
-    JOIN products pr ON w.product_id = pr.id
-    ORDER BY w.created_at DESC
-    LIMIT 50
+    JOIN products pr ON wli.product_id = pr.id
+    ORDER BY w.created_at DESC, wli.id DESC
+    LIMIT 100
 ")->fetchAll();
 
 $currency = getSetting('currency_symbol', '৳');
@@ -111,7 +116,6 @@ $currency = getSetting('currency_symbol', '৳');
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <style>
-  /* Override default modal max-width for add lot to fit table */
   #modalAddLot .modal {
     max-width: 800px;
     width: 95vw;
@@ -184,19 +188,19 @@ $currency = getSetting('currency_symbol', '৳');
       <!-- Recent Warehouse Lots -->
       <div class="table-wrapper mt-24">
         <div class="table-toolbar">
-          <div class="toolbar-title"><i class="fas fa-truck"></i> Recent Incoming Lots</div>
+          <div class="toolbar-title"><i class="fas fa-truck"></i> Recent Incoming Lots & Items</div>
           <div class="spacer"></div>
         </div>
         <div style="overflow-x:auto;">
         <table class="tbl">
-          <thead><tr><th>#</th><th>Provider</th><th>Product</th><th>Unit</th><th class="text-right">Qty</th><th class="text-right">Buying Price</th><th class="text-right">Selling Price</th><th>Date</th></tr></thead>
+          <thead><tr><th>Lot ID</th><th>Provider</th><th>Product</th><th>Unit</th><th class="text-right">Qty</th><th class="text-right">Buying Price</th><th class="text-right">Selling Price</th><th>Date</th></tr></thead>
           <tbody>
             <?php if (empty($recent_lots)): ?>
               <tr><td colspan="8"><div class="table-empty"><p>No lots added yet.</p></div></td></tr>
             <?php else: ?>
-              <?php foreach ($recent_lots as $i => $lot): ?>
+              <?php foreach ($recent_lots as $lot): ?>
               <tr>
-                <td class="text-muted fs-12"><?= $i+1 ?></td>
+                <td class="text-muted fs-12">#<?= $lot['lot_id'] ?>-<?= $lot['id'] ?></td>
                 <td class="fw-700"><?= htmlspecialchars($lot['provider_name']) ?></td>
                 <td class="fw-700"><?= htmlspecialchars($lot['product_name']) ?></td>
                 <td><span class="badge badge-info"><?= $lot['unit_type'] ?></span></td>

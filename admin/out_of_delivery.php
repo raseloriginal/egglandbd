@@ -17,45 +17,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $demand_ids = $_POST['demand_ids'] ?? [];
         
         if (!$dsr_id || empty($items) || empty($demand_ids)) {
-            $error = 'Please fill all required fields, select at least one demand, and add at least one lot.';
+            $error = 'Please fill all required fields, select at least one demand, and add at least one lot item.';
         } else {
             $pdo->beginTransaction();
             try {
+                // 1. Create parent dispatch record
+                $pdo->prepare("INSERT INTO dispatches (dsr_id, destination_type, status) VALUES (?, ?, 'dispatched')")
+                    ->execute([$dsr_id, $destination_type]);
+                $dispatch_id = $pdo->lastInsertId();
+                
+                // 2. Link demands to this dispatch
+                $stmt_link = $pdo->prepare("INSERT INTO dispatch_demands (dispatch_id, demand_id) VALUES (?, ?)");
+                foreach ($demand_ids as $did) {
+                    $stmt_link->execute([$dispatch_id, $did]);
+                }
+                
+                // 3. Process dispatch items
                 $totalDispatchedCount = 0;
                 foreach ($items as $item) {
-                    $lot_id = (int)($item['warehouse_lot_id'] ?? 0);
+                    $lot_item_id = (int)($item['warehouse_lot_item_id'] ?? 0);
                     $qty = (float)($item['qty_dispatched'] ?? 0);
                     
-                    if (!$lot_id || $qty <= 0) {
+                    if (!$lot_item_id || $qty <= 0) {
                         continue;
                     }
                     
-                    // Fetch lot details
-                    $stmt = $pdo->prepare("SELECT product_id, qty FROM warehouse_lots WHERE id = ?");
-                    $stmt->execute([$lot_id]);
-                    $lot = $stmt->fetch();
+                    // Fetch lot item details
+                    $stmt = $pdo->prepare("SELECT product_id, qty FROM warehouse_lot_items WHERE id = ?");
+                    $stmt->execute([$lot_item_id]);
+                    $lot_item = $stmt->fetch();
                     
-                    if ($lot && $lot['qty'] >= $qty) {
-                        // Create dispatch record
-                        $pdo->prepare("INSERT INTO dispatches (dsr_id, destination_type, warehouse_lot_id, qty_dispatched, status) VALUES (?, ?, ?, ?, 'dispatched')")
-                            ->execute([$dsr_id, $destination_type, $lot_id, $qty]);
-                        $dispatch_id = $pdo->lastInsertId();
+                    if ($lot_item && $lot_item['qty'] >= $qty) {
+                        // Insert into dispatch_items
+                        $pdo->prepare("INSERT INTO dispatch_items (dispatch_id, warehouse_lot_item_id, qty_dispatched) VALUES (?, ?, ?)")
+                            ->execute([$dispatch_id, $lot_item_id, $qty]);
                         
-                        // Link demands
-                        $stmt_link = $pdo->prepare("INSERT INTO dispatch_demands (dispatch_id, demand_id) VALUES (?, ?)");
-                        foreach ($demand_ids as $did) {
-                            $stmt_link->execute([$dispatch_id, $did]);
-                        }
-                        
-                        // Deduct from warehouse_lot
-                        $pdo->prepare("UPDATE warehouse_lots SET qty = qty - ? WHERE id = ?")->execute([$qty, $lot_id]);
+                        // Deduct from warehouse_lot_items
+                        $pdo->prepare("UPDATE warehouse_lot_items SET qty = qty - ? WHERE id = ?")->execute([$qty, $lot_item_id]);
                         
                         // Deduct from inventory
-                        $pdo->prepare("UPDATE inventory SET qty_available = qty_available - ? WHERE product_id = ?")->execute([$qty, $lot['product_id']]);
+                        $pdo->prepare("UPDATE inventory SET qty_available = qty_available - ? WHERE product_id = ?")->execute([$qty, $lot_item['product_id']]);
                         
                         $totalDispatchedCount++;
                     } else {
-                        throw new Exception("Insufficient quantity in lot #$lot_id or lot not found.");
+                        throw new Exception("Insufficient quantity in selected Lot Item ID #$lot_item_id.");
                     }
                 }
                 
@@ -67,10 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     $pdo->commit();
-                    $success = 'Deliveries dispatched successfully and stock deducted.';
+                    $success = "Dispatch #$dispatch_id created successfully with $totalDispatchedCount item(s).";
                 } else {
                     $pdo->rollBack();
-                    $error = 'No valid lots were dispatched.';
+                    $error = 'No valid lot items were dispatched.';
                 }
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -130,12 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch lists for the modal
 $dsrs = $pdo->query("SELECT * FROM dsrs WHERE status='active' ORDER BY name")->fetchAll();
+
+// Fetch available warehouse lot items
 $lots = $pdo->query("
-    SELECT w.*, p.name as product_name, prov.name as provider_name 
-    FROM warehouse_lots w
-    JOIN products p ON p.id = w.product_id
+    SELECT wli.*, p.name as product_name, prov.name as provider_name, w.created_at
+    FROM warehouse_lot_items wli
+    JOIN warehouse_lots w ON w.id = wli.warehouse_lot_id
+    JOIN products p ON p.id = wli.product_id
     JOIN providers prov ON prov.id = w.provider_id
-    WHERE w.qty > 0
+    WHERE wli.qty > 0
     ORDER BY w.created_at DESC
 ")->fetchAll();
 
@@ -157,15 +165,32 @@ $pending_demand_items = $pdo->query("
     WHERE d.status IN ('pending', 'approved') AND d.is_deleted = 0
 ")->fetchAll();
 
-// Fetch all dispatches for the view
-$dispatches = $pdo->query("
-    SELECT d.*, dsr.name as dsr_name, w.qty as lot_qty, p.name as product_name
-    FROM dispatches d
+// Fetch all dispatches grouped by parent dispatch ID
+$dispatches_raw = $pdo->query("
+    SELECT di.*, d.dsr_id, d.destination_type, d.status, d.created_at, dsr.name as dsr_name, pr.name as product_name, wli.warehouse_lot_id
+    FROM dispatch_items di
+    JOIN dispatches d ON di.dispatch_id = d.id
     JOIN dsrs dsr ON dsr.id = d.dsr_id
-    JOIN warehouse_lots w ON w.id = d.warehouse_lot_id
-    JOIN products p ON p.id = w.product_id
-    ORDER BY d.created_at DESC
+    JOIN warehouse_lot_items wli ON di.warehouse_lot_item_id = wli.id
+    JOIN products pr ON wli.product_id = pr.id
+    ORDER BY d.created_at DESC, di.id ASC
 ")->fetchAll();
+
+$dispatches = [];
+foreach ($dispatches_raw as $row) {
+    $did = $row['dispatch_id'];
+    if (!isset($dispatches[$did])) {
+        $dispatches[$did] = [
+            'id' => $did,
+            'dsr_name' => $row['dsr_name'],
+            'destination_type' => $row['destination_type'],
+            'status' => $row['status'],
+            'created_at' => $row['created_at'],
+            'items' => []
+        ];
+    }
+    $dispatches[$did]['items'][] = $row;
+}
 
 $currency = getSetting('currency_symbol', '৳');
 ?>
@@ -212,10 +237,10 @@ $currency = getSetting('currency_symbol', '৳');
         <table class="tbl" id="dispatchTbl">
           <thead>
             <tr>
-              <th>#ID</th>
+              <th>#Delivery ID</th>
               <th>DSR</th>
               <th>Destination</th>
-              <th>Product (Lot)</th>
+              <th>Products (Lot)</th>
               <th class="text-right">Qty Dispatched</th>
               <th>Status</th>
               <th>Date</th>
@@ -226,12 +251,24 @@ $currency = getSetting('currency_symbol', '৳');
             <?php if (empty($dispatches)): ?>
               <tr><td colspan="8"><div class="table-empty"><div class="empty-icon"><i class="fas fa-route"></i></div><p>No deliveries recorded.</p></div></td></tr>
             <?php else: foreach ($dispatches as $d): ?>
-              <tr data-search="<?= strtolower($d['dsr_name'].' '.$d['destination_type'].' '.$d['product_name']) ?>">
+              <tr data-search="<?= strtolower($d['dsr_name'].' '.$d['destination_type']) ?>">
                 <td class="text-muted fs-12">#<?= $d['id'] ?></td>
                 <td class="fw-700"><?= htmlspecialchars($d['dsr_name']) ?></td>
                 <td><span class="badge badge-info"><?= ucfirst($d['destination_type']) ?></span></td>
-                <td><?= htmlspecialchars($d['product_name']) ?> (Lot #<?= $d['warehouse_lot_id'] ?>)</td>
-                <td class="text-right fw-700 text-primary-color"><?= number_format($d['qty_dispatched'], 0) ?></td>
+                <td>
+                  <ul style="margin: 0; padding-left: 16px; font-size: 13px; font-weight: 500;">
+                    <?php foreach ($d['items'] as $item): ?>
+                      <li><?= htmlspecialchars($item['product_name']) ?> (Lot #<?= $item['warehouse_lot_id'] ?>)</li>
+                    <?php endforeach; ?>
+                  </ul>
+                </td>
+                <td class="text-right fw-700 text-primary-color">
+                  <ul style="margin: 0; padding: 0; list-style: none; font-size: 13px;">
+                    <?php foreach ($d['items'] as $item): ?>
+                      <li><?= number_format($item['qty_dispatched'], 0) ?></li>
+                    <?php endforeach; ?>
+                  </ul>
+                </td>
                 <td>
                   <?php if ($d['status'] === 'dispatched'): ?>
                     <span class="badge badge-warning">Dispatched</span>
@@ -321,7 +358,7 @@ $currency = getSetting('currency_symbol', '৳');
             <table class="tbl" style="min-width: 500px;">
               <thead>
                 <tr>
-                  <th>Select Warehouse Lot</th>
+                  <th>Select Warehouse Lot Item</th>
                   <th style="width: 160px;" class="text-right">Qty to Dispatch</th>
                   <th style="width: 50px;"></th>
                 </tr>
@@ -353,20 +390,20 @@ const lotsData = <?= json_encode($lots, JSON_UNESCAPED_UNICODE) ?>;
 const demandItems = <?= json_encode($pending_demand_items, JSON_UNESCAPED_UNICODE) ?>;
 const currencySymbol = '<?= $currency ?>';
 
-function addDispatchLotRow(lotId = '', qty = '') {
+function addDispatchLotRow(lotItemId = '', qty = '') {
   const tbody = document.getElementById('dispatchLotsTbody');
   const tr = document.createElement('tr');
   tr.id = 'dispatch-row-' + dispatchRowIndex;
   
-  let optionsHtml = '<option value="" data-avail="0">— Select Warehouse Lot —</option>';
+  let optionsHtml = '<option value="" data-avail="0">— Select Warehouse Lot Item —</option>';
   lotsData.forEach(l => {
-    const selected = (l.id == lotId) ? 'selected' : '';
-    optionsHtml += `<option value="${l.id}" ${selected} data-avail="${l.qty}">Lot #${l.id} - ${l.product_name} (Avail: ${parseFloat(l.qty).toFixed(0)} | Provider: ${l.provider_name})</option>`;
+    const selected = (l.id == lotItemId) ? 'selected' : '';
+    optionsHtml += `<option value="${l.id}" ${selected} data-avail="${l.qty}">Lot #${l.warehouse_lot_id} - ${l.product_name} (Avail: ${parseFloat(l.qty).toFixed(0)} | Provider: ${l.provider_name})</option>`;
   });
   
   tr.innerHTML = `
     <td>
-      <select name="items[${dispatchRowIndex}][warehouse_lot_id]" class="form-control form-select" required onchange="updateDemandAllocationProgress()">
+      <select name="items[${dispatchRowIndex}][warehouse_lot_item_id]" class="form-control form-select" required onchange="updateDemandAllocationProgress()">
         ${optionsHtml}
       </select>
     </td>
@@ -430,10 +467,10 @@ function updateDemandAllocationProgress() {
     const select = row.querySelector('select');
     const qtyInput = row.querySelector('input[type="number"]');
     if (select && qtyInput) {
-      const lotId = parseInt(select.value);
+      const lotItemId = parseInt(select.value);
       const qty = parseFloat(qtyInput.value) || 0;
-      if (lotId) {
-        const lotObj = lotsData.find(l => l.id == lotId);
+      if (lotItemId) {
+        const lotObj = lotsData.find(l => l.id == lotItemId);
         if (lotObj) {
           const pid = parseInt(lotObj.product_id);
           if (!allocated[pid]) {

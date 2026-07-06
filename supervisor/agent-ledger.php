@@ -168,17 +168,21 @@ if ($supId) {
 $pendingHubDispatches = [];
 if ($supId) {
     $stmt = $pdo->prepare("
-        SELECT d.*, dsr.name as dsr_name, w.qty as lot_qty, p.name as product_name
+        SELECT d.*, dsr.name as dsr_name, 
+               GROUP_CONCAT(CONCAT(pr.name, ' (Lot #', wli.warehouse_lot_id, ')') SEPARATOR ', ') as product_name,
+               SUM(di.qty_dispatched) as qty_dispatched
         FROM dispatches d
         JOIN dsrs dsr ON dsr.id = d.dsr_id
-        JOIN warehouse_lots w ON w.id = d.warehouse_lot_id
-        JOIN products p ON p.id = w.product_id
+        JOIN dispatch_items di ON di.dispatch_id = d.id
+        JOIN warehouse_lot_items wli ON di.warehouse_lot_item_id = wli.id
+        JOIN products pr ON pr.id = wli.product_id
         WHERE d.destination_type = 'hub' AND d.status = 'dispatched'
         AND EXISTS (
             SELECT 1 FROM dispatch_demands dd 
             JOIN demands dem ON dem.id = dd.demand_id 
             WHERE dd.dispatch_id = d.id AND dem.supervisor_id = ?
         )
+        GROUP BY d.id
         ORDER BY d.created_at ASC
     ");
     $stmt->execute([$supId]);
