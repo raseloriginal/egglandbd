@@ -13,45 +13,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add_dispatch') {
         $dsr_id = (int)($_POST['dsr_id'] ?? 0);
         $destination_type = in_array($_POST['destination_type'] ?? '', ['hub', 'direct']) ? $_POST['destination_type'] : 'direct';
-        $lot_id = (int)($_POST['warehouse_lot_id'] ?? 0);
-        $qty = (float)($_POST['qty_dispatched'] ?? 0);
+        $items = $_POST['items'] ?? [];
         $demand_ids = $_POST['demand_ids'] ?? [];
         
-        if (!$dsr_id || !$lot_id || $qty <= 0 || empty($demand_ids)) {
-            $error = 'Please fill all required fields and select at least one demand.';
+        if (!$dsr_id || empty($items) || empty($demand_ids)) {
+            $error = 'Please fill all required fields, select at least one demand, and add at least one lot.';
         } else {
             $pdo->beginTransaction();
             try {
-                // Fetch lot product_id to deduct from inventory
-                $stmt = $pdo->prepare("SELECT product_id, qty FROM warehouse_lots WHERE id = ?");
-                $stmt->execute([$lot_id]);
-                $lot = $stmt->fetch();
-                
-                if ($lot && $lot['qty'] >= $qty) {
-                    // Create dispatch record
-                    $pdo->prepare("INSERT INTO dispatches (dsr_id, destination_type, warehouse_lot_id, qty_dispatched, status) VALUES (?, ?, ?, ?, 'dispatched')")
-                        ->execute([$dsr_id, $destination_type, $lot_id, $qty]);
-                    $dispatch_id = $pdo->lastInsertId();
+                $totalDispatchedCount = 0;
+                foreach ($items as $item) {
+                    $lot_id = (int)($item['warehouse_lot_id'] ?? 0);
+                    $qty = (float)($item['qty_dispatched'] ?? 0);
                     
-                    // Link demands and update their status
-                    $stmt_link = $pdo->prepare("INSERT INTO dispatch_demands (dispatch_id, demand_id) VALUES (?, ?)");
+                    if (!$lot_id || $qty <= 0) {
+                        continue;
+                    }
+                    
+                    // Fetch lot details
+                    $stmt = $pdo->prepare("SELECT product_id, qty FROM warehouse_lots WHERE id = ?");
+                    $stmt->execute([$lot_id]);
+                    $lot = $stmt->fetch();
+                    
+                    if ($lot && $lot['qty'] >= $qty) {
+                        // Create dispatch record
+                        $pdo->prepare("INSERT INTO dispatches (dsr_id, destination_type, warehouse_lot_id, qty_dispatched, status) VALUES (?, ?, ?, ?, 'dispatched')")
+                            ->execute([$dsr_id, $destination_type, $lot_id, $qty]);
+                        $dispatch_id = $pdo->lastInsertId();
+                        
+                        // Link demands
+                        $stmt_link = $pdo->prepare("INSERT INTO dispatch_demands (dispatch_id, demand_id) VALUES (?, ?)");
+                        foreach ($demand_ids as $did) {
+                            $stmt_link->execute([$dispatch_id, $did]);
+                        }
+                        
+                        // Deduct from warehouse_lot
+                        $pdo->prepare("UPDATE warehouse_lots SET qty = qty - ? WHERE id = ?")->execute([$qty, $lot_id]);
+                        
+                        // Deduct from inventory
+                        $pdo->prepare("UPDATE inventory SET qty_available = qty_available - ? WHERE product_id = ?")->execute([$qty, $lot['product_id']]);
+                        
+                        $totalDispatchedCount++;
+                    } else {
+                        throw new Exception("Insufficient quantity in lot #$lot_id or lot not found.");
+                    }
+                }
+                
+                if ($totalDispatchedCount > 0) {
+                    // Update demands status to invoiced
                     $stmt_upd_demand = $pdo->prepare("UPDATE demands SET status = 'invoiced' WHERE id = ?");
                     foreach ($demand_ids as $did) {
-                        $stmt_link->execute([$dispatch_id, $did]);
                         $stmt_upd_demand->execute([$did]);
                     }
                     
-                    // Deduct from warehouse_lot
-                    $pdo->prepare("UPDATE warehouse_lots SET qty = qty - ? WHERE id = ?")->execute([$qty, $lot_id]);
-                    
-                    // Deduct from inventory
-                    $pdo->prepare("UPDATE inventory SET qty_available = qty_available - ? WHERE product_id = ?")->execute([$qty, $lot['product_id']]);
-                    
                     $pdo->commit();
-                    $success = 'Dispatch recorded successfully and stock deducted.';
+                    $success = 'Deliveries dispatched successfully and stock deducted.';
                 } else {
                     $pdo->rollBack();
-                    $error = 'Insufficient quantity in the selected lot.';
+                    $error = 'No valid lots were dispatched.';
                 }
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -154,6 +173,10 @@ $currency = getSetting('currency_symbol', '৳');
 .demand-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
 .demand-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
 .demand-item:last-child { border-bottom: none; }
+#modalDispatch .modal {
+  max-width: 800px;
+  width: 95vw;
+}
 </style>
 </head>
 <body>
@@ -192,7 +215,7 @@ $currency = getSetting('currency_symbol', '৳');
           </thead>
           <tbody>
             <?php if (empty($dispatches)): ?>
-              <tr><td colspan="7"><div class="table-empty"><div class="empty-icon"><i class="fas fa-route"></i></div><p>No deliveries recorded.</p></div></td></tr>
+              <tr><td colspan="8"><div class="table-empty"><div class="empty-icon"><i class="fas fa-route"></i></div><p>No deliveries recorded.</p></div></td></tr>
             <?php else: foreach ($dispatches as $d): ?>
               <tr data-search="<?= strtolower($d['dsr_name'].' '.$d['destination_type'].' '.$d['product_name']) ?>">
                 <td class="text-muted fs-12">#<?= $d['id'] ?></td>
@@ -233,7 +256,7 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Add Dispatch Modal -->
 <div class="modal-overlay" id="modalDispatch" onclick="closeModalOuter(event,'modalDispatch')">
-  <div class="modal" style="max-width: 600px;">
+  <div class="modal">
     <div class="modal-header"><div class="modal-title"><i class="fas fa-truck"></i> Add New Delivery</div><button class="modal-close" onclick="closeModal('modalDispatch')"><i class="fas fa-times"></i></button></div>
     <form method="POST">
       <input type="hidden" name="action" value="add_dispatch">
@@ -274,19 +297,31 @@ $currency = getSetting('currency_symbol', '৳');
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Select Lot</label>
-          <select name="warehouse_lot_id" class="form-control form-select" required>
-            <option value="">— Select Warehouse Lot —</option>
-            <?php foreach ($lots as $lot): ?>
-              <option value="<?= $lot['id'] ?>">Lot #<?= $lot['id'] ?> - <?= htmlspecialchars($lot['product_name']) ?> (Avail: <?= number_format($lot['qty'], 0) ?> | Provider: <?= htmlspecialchars($lot['provider_name']) ?>)</option>
-            <?php endforeach; ?>
-          </select>
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="fw-700 fs-14 text-primary-color"><i class="fas fa-truck-loading"></i> Lots to Dispatch</span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addDispatchLotRow()"><i class="fas fa-plus"></i> Add Lot</button>
+          </div>
+          
+          <div style="overflow-x:auto;">
+            <table class="tbl" style="min-width: 500px;">
+              <thead>
+                <tr>
+                  <th>Select Warehouse Lot</th>
+                  <th style="width: 160px;" class="text-right">Qty to Dispatch</th>
+                  <th style="width: 50px;"></th>
+                </tr>
+              </thead>
+              <tbody id="dispatchLotsTbody">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Total Dispatch Qty</label>
-          <input type="number" name="qty_dispatched" id="dispatchQty" class="form-control" min="0.01" step="0.01" required placeholder="0.00">
+        <div class="form-group" style="margin-top: 16px;">
+          <label class="form-label">Total Dispatch Qty Summary</label>
+          <input type="number" name="qty_dispatched" id="dispatchQty" class="form-control" min="0" step="0.01" readonly placeholder="0.00" style="background:#F3F4F6;">
         </div>
 
       </div>
@@ -299,7 +334,67 @@ $currency = getSetting('currency_symbol', '৳');
 </div>
 
 <script>
-function openModal(id){document.getElementById(id).classList.add('active');}
+let dispatchRowIndex = 0;
+const lotsData = <?= json_encode($lots, JSON_UNESCAPED_UNICODE) ?>;
+const currencySymbol = '<?= $currency ?>';
+
+function addDispatchLotRow(lotId = '', qty = '') {
+  const tbody = document.getElementById('dispatchLotsTbody');
+  const tr = document.createElement('tr');
+  tr.id = 'dispatch-row-' + dispatchRowIndex;
+  
+  let optionsHtml = '<option value="" data-avail="0">— Select Warehouse Lot —</option>';
+  lotsData.forEach(l => {
+    const selected = (l.id == lotId) ? 'selected' : '';
+    optionsHtml += `<option value="${l.id}" ${selected} data-avail="${l.qty}">Lot #${l.id} - ${l.product_name} (Avail: ${parseFloat(l.qty).toFixed(0)} | Provider: ${l.provider_name})</option>`;
+  });
+  
+  tr.innerHTML = `
+    <td>
+      <select name="items[${dispatchRowIndex}][warehouse_lot_id]" class="form-control form-select" required>
+        ${optionsHtml}
+      </select>
+    </td>
+    <td>
+      <input type="number" name="items[${dispatchRowIndex}][qty_dispatched]" id="disp-qty-${dispatchRowIndex}" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0.00" oninput="sumTotalDispatchQty()">
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeDispatchLotRow(${dispatchRowIndex})"><i class="fas fa-trash-alt"></i></button>
+    </td>
+  `;
+  
+  tbody.appendChild(tr);
+  dispatchRowIndex++;
+  sumTotalDispatchQty();
+}
+
+function removeDispatchLotRow(index) {
+  const tr = document.getElementById('dispatch-row-' + index);
+  if (tr) tr.remove();
+  sumTotalDispatchQty();
+}
+
+function sumTotalDispatchQty() {
+  let total = 0;
+  document.querySelectorAll('input[id^="disp-qty-"]').forEach(input => {
+    total += parseFloat(input.value) || 0;
+  });
+  const totalInput = document.getElementById('dispatchQty');
+  if (totalInput) {
+    totalInput.value = total;
+  }
+}
+
+function openModal(id){
+  if (id === 'modalDispatch') {
+    const tbody = document.getElementById('dispatchLotsTbody');
+    if (tbody.children.length === 0) {
+      addDispatchLotRow();
+    }
+    calcTotalQty();
+  }
+  document.getElementById(id).classList.add('active');
+}
 function closeModal(id){document.getElementById(id).classList.remove('active');}
 function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
 function filterTbl(inp,tid){const q=inp.value.toLowerCase();document.querySelectorAll('#'+tid+' tbody tr').forEach(r=>{r.style.display=(r.dataset.search||'').includes(q)?'':' none';});}
@@ -309,7 +404,17 @@ function calcTotalQty() {
   document.querySelectorAll('input[name="demand_ids[]"]:checked').forEach(cb => {
     total += parseFloat(cb.dataset.qty) || 0;
   });
-  document.getElementById('dispatchQty').value = total;
+  const totalInput = document.getElementById('dispatchQty');
+  if (totalInput) {
+    totalInput.value = total;
+  }
+  const rows = document.getElementById('dispatchLotsTbody').children;
+  if (rows.length === 1) {
+    const qtyInput = rows[0].querySelector('input[type="number"]');
+    if (qtyInput && qtyInput.value === '') {
+      qtyInput.value = total;
+    }
+  }
 }
 </script>
 </body>
