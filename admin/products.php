@@ -19,6 +19,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'history') {
 // Add/Edit/Delete product
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    if ($action === 'add' || $action === 'edit') {
+        $name         = trim($_POST['name'] ?? '');
+        $unit         = in_array($_POST['unit_type']??'', ['case','kg','dozen','piece','bag','crate']) ? $_POST['unit_type'] : 'case';
+        $buying_price = (float)($_POST['buying_price'] ?? 0);
+        $price        = (float)($_POST['price'] ?? 0);
+        $status       = in_array($_POST['status']??'', ['active','inactive']) ? $_POST['status'] : 'active';
+
         // Handle Image Upload
         $imagePath = null;
         if ($action === 'edit') {
@@ -98,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    }
     if ($action === 'delete') {
         $pid = (int)($_POST['product_id'] ?? 0);
         try { $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$pid]); $success = 'Product deleted.'; }
