@@ -118,6 +118,59 @@ $currency = getSetting('currency_symbol', '৳');
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+.map-picker-wrapper {
+  position: relative;
+  margin-top: 12px;
+}
+.map-picker-wrapper.fullscreen-active {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999 !important;
+  margin-top: 0 !important;
+  background: rgba(0,0,0,0.8);
+  padding: 16px;
+  box-sizing: border-box;
+}
+.map-picker-wrapper.fullscreen-active div {
+  height: 100% !important;
+  border-radius: 8px !important;
+}
+.map-overlay-btn {
+  position: absolute;
+  z-index: 1000;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  transition: all 0.2s;
+}
+.map-overlay-btn:hover {
+  background: #f5f5f5;
+  color: var(--primary);
+}
+.locate-btn {
+  bottom: 10px;
+  right: 10px;
+}
+.fullscreen-btn {
+  top: 10px;
+  right: 10px;
+  border-radius: 4px;
+}
+</style>
 </head>
 <body>
 <div class="layout-wrapper">
@@ -203,8 +256,15 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="form-group"><label class="form-label">Password *</label><input type="password" name="password" class="form-control" required></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Latitude</label><input type="text" name="lat" class="form-control" placeholder="23.8103"></div>
-      <div class="form-group"><label class="form-label">Longitude</label><input type="text" name="lng" class="form-control" placeholder="90.4125"></div>
+      <div class="form-group"><label class="form-label">Latitude</label><input type="text" name="lat" id="addLat" class="form-control" placeholder="23.8103"></div>
+      <div class="form-group"><label class="form-label">Longitude</label><input type="text" name="lng" id="addLng" class="form-control" placeholder="90.4125"></div>
+    </div>
+    <div id="addFormMapGroup">
+      <div class="map-picker-wrapper">
+        <div id="addPickMap" style="height: 180px; border-radius: 8px; border: 1px solid var(--border); cursor: crosshair; z-index: 10;"></div>
+        <button type="button" class="map-overlay-btn locate-btn" onclick="locateMe('add')" title="Locate My Position"><i class="fas fa-crosshairs"></i></button>
+        <button type="button" class="map-overlay-btn fullscreen-btn" onclick="toggleFullscreen('add')" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
+      </div>
     </div>
   </div>
   <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button></div>
@@ -248,6 +308,13 @@ $currency = getSetting('currency_symbol', '৳');
       <div class="form-group"><label class="form-label">Latitude</label><input type="text" name="lat" id="eLat" class="form-control" placeholder="23.8103"></div>
       <div class="form-group"><label class="form-label">Longitude</label><input type="text" name="lng" id="eLng" class="form-control" placeholder="90.4125"></div>
     </div>
+    <div id="editFormMapGroup">
+      <div class="map-picker-wrapper">
+        <div id="editPickMap" style="height: 180px; border-radius: 8px; border: 1px solid var(--border); cursor: crosshair; z-index: 10;"></div>
+        <button type="button" class="map-overlay-btn locate-btn" onclick="locateMe('edit')" title="Locate My Position"><i class="fas fa-crosshairs"></i></button>
+        <button type="button" class="map-overlay-btn fullscreen-btn" onclick="toggleFullscreen('edit')" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
+      </div>
+    </div>
   </div>
   <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button></div>
   </form></div>
@@ -255,9 +322,120 @@ $currency = getSetting('currency_symbol', '৳');
 <form method="POST" id="delForm" style="display:none;"><input type="hidden" name="action" value="delete"><input type="hidden" name="user_id" id="delUid"></form>
 
 <script>
-function openModal(id){document.getElementById(id).classList.add('active');}
-function closeModal(id){document.getElementById(id).classList.remove('active');}
+let addPickMap, editPickMap;
+let addPickMarker, editPickMarker;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const defLat = 23.8103;
+  const defLng = 90.4125;
+
+  // Add picker map
+  addPickMap = L.map('addPickMap').setView([defLat, defLng], 12);
+  L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {maxZoom:20, attribution:'© Google Maps'}).addTo(addPickMap);
+  addPickMarker = L.marker([defLat, defLng], {draggable: true}).addTo(addPickMap);
+
+  function updateAddCoords(lat, lng) {
+    document.getElementById('addLat').value = lat.toFixed(6);
+    document.getElementById('addLng').value = lng.toFixed(6);
+  }
+
+  addPickMap.on('click', (e) => {
+    addPickMarker.setLatLng(e.latlng);
+    updateAddCoords(e.latlng.lat, e.latlng.lng);
+  });
+  addPickMarker.on('dragend', () => {
+    const pos = addPickMarker.getLatLng();
+    updateAddCoords(pos.lat, pos.lng);
+  });
+
+  // Edit picker map
+  editPickMap = L.map('editPickMap').setView([defLat, defLng], 12);
+  L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {maxZoom:20, attribution:'© Google Maps'}).addTo(editPickMap);
+  editPickMarker = L.marker([defLat, defLng], {draggable: true}).addTo(editPickMap);
+
+  function updateEditCoords(lat, lng) {
+    document.getElementById('eLat').value = lat.toFixed(6);
+    document.getElementById('eLng').value = lng.toFixed(6);
+  }
+
+  editPickMap.on('click', (e) => {
+    editPickMarker.setLatLng(e.latlng);
+    updateEditCoords(e.latlng.lat, e.latlng.lng);
+  });
+  editPickMarker.on('dragend', () => {
+    const pos = editPickMarker.getLatLng();
+    updateEditCoords(pos.lat, pos.lng);
+  });
+});
+
+function locateMe(type) {
+  const mapObj = type === 'add' ? addPickMap : editPickMap;
+  const markerObj = type === 'add' ? addPickMarker : editPickMarker;
+  const latId = type === 'add' ? 'addLat' : 'eLat';
+  const lngId = type === 'add' ? 'addLng' : 'eLng';
+  
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      mapObj.setView([lat, lng], 15);
+      markerObj.setLatLng([lat, lng]);
+      document.getElementById(latId).value = lat.toFixed(6);
+      document.getElementById(lngId).value = lng.toFixed(6);
+    }, (error) => {
+      alert('Error getting geolocation: ' + error.message);
+    });
+  } else {
+    alert('Geolocation is not supported by your browser.');
+  }
+}
+
+function toggleFullscreen(type) {
+  const mapEl = document.getElementById(type === 'add' ? 'addPickMap' : 'editPickMap');
+  const wrapper = mapEl.parentElement;
+  const btn = wrapper.querySelector('.fullscreen-btn i');
+  const mapObj = type === 'add' ? addPickMap : editPickMap;
+  
+  if (wrapper.classList.contains('fullscreen-active')) {
+    wrapper.classList.remove('fullscreen-active');
+    btn.className = 'fas fa-expand';
+    const formGroup = document.getElementById(type === 'add' ? 'addFormMapGroup' : 'editFormMapGroup');
+    formGroup.appendChild(wrapper);
+  } else {
+    wrapper.classList.add('fullscreen-active');
+    btn.className = 'fas fa-compress';
+    document.body.appendChild(wrapper);
+  }
+  setTimeout(() => { mapObj.invalidateSize(); }, 250);
+}
+
+function openModal(id){
+  document.getElementById(id).classList.add('active');
+  if (id === 'modalAdd') {
+    setTimeout(() => {
+      addPickMap.invalidateSize();
+      const lat = parseFloat(document.getElementById('addLat').value) || 23.8103;
+      const lng = parseFloat(document.getElementById('addLng').value) || 90.4125;
+      addPickMap.setView([lat, lng], 13);
+      addPickMarker.setLatLng([lat, lng]);
+    }, 200);
+  }
+}
+
+function closeModal(id){
+  const type = id === 'modalAdd' ? 'add' : 'edit';
+  const mapEl = document.getElementById(type === 'add' ? 'addPickMap' : 'editPickMap');
+  const wrapper = mapEl.parentElement;
+  if (wrapper.classList.contains('fullscreen-active')) {
+    wrapper.classList.remove('fullscreen-active');
+    wrapper.querySelector('.fullscreen-btn i').className = 'fas fa-expand';
+    const formGroup = document.getElementById(type === 'add' ? 'addFormMapGroup' : 'editFormMapGroup');
+    formGroup.appendChild(wrapper);
+  }
+  document.getElementById(id).classList.remove('active');
+}
 function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
+
 function openEdit(a){
   document.getElementById('eUid').value=a.user_id;
   document.getElementById('eAgentId').value=a.agent_id;
@@ -266,10 +444,21 @@ function openEdit(a){
   document.getElementById('eArea').value=a.area||'';
   document.getElementById('eStatus').value=a.status;
   document.getElementById('eSupId').value=a.supervisor_id||'';
+  
+  const lat = parseFloat(a.lat) || 23.8103;
+  const lng = parseFloat(a.lng) || 90.4125;
   document.getElementById('eLat').value=a.lat||'';
   document.getElementById('eLng').value=a.lng||'';
+  
   openModal('modalEdit');
+  
+  setTimeout(() => {
+    editPickMap.invalidateSize();
+    editPickMap.setView([lat, lng], 13);
+    editPickMarker.setLatLng([lat, lng]);
+  }, 200);
 }
+
 function delAgent(uid,name){if(confirm('Remove agent "'+name+'"?')){document.getElementById('delUid').value=uid;document.getElementById('delForm').submit();}}
 function filterTbl(inp,tid){const q=inp.value.toLowerCase();document.querySelectorAll('#'+tid+' tbody tr').forEach(r=>{r.style.display=(r.dataset.search||'').includes(q)?'':'none';});}
 </script>

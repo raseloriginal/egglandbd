@@ -126,10 +126,10 @@ $currency = getSetting('currency_symbol', '৳');
         <div class="map-layer-selector" style="display: flex; align-items: center; gap: 8px;">
           <span class="fs-12 fw-700 text-muted"><i class="fas fa-layer-group"></i> Map Style:</span>
           <select id="mapLayerSelect" onchange="changeMapLayer(this.value)" class="form-control form-select" style="padding: 6px 12px; font-size: 13px; font-weight: 600; width: auto; border-radius: 8px; border: 1px solid var(--border); background: #fff; outline:none;">
+            <option value="hybrid" selected>Google Hybrid</option>
             <option value="osm">OpenStreetMap</option>
             <option value="roadmap">Google Roadmap</option>
             <option value="satellite">Google Satellite</option>
-            <option value="hybrid">Google Hybrid</option>
           </select>
         </div>
       </div>
@@ -168,8 +168,8 @@ const layers = {
   })
 };
 
-layers.osm.addTo(map);
-let currentLayer = layers.osm;
+layers.hybrid.addTo(map);
+let currentLayer = layers.hybrid;
 
 function changeMapLayer(layerKey) {
   if (layers[layerKey]) {
