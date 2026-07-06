@@ -14,6 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pass     = $_POST['password'] ?? '';
         $area     = trim($_POST['area'] ?? '');
         $supId    = (int)($_POST['supervisor_id'] ?? 0);
+        $lat      = !empty($_POST['lat']) ? (float)$_POST['lat'] : 23.81030000;
+        $lng      = !empty($_POST['lng']) ? (float)$_POST['lng'] : 90.41250000;
         if (!$username || !$fullName || !$pass || !$supId) { 
             $error = 'Username, name, password, and supervisor are required.'; 
         } else {
@@ -28,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("INSERT INTO users (username,password,full_name,phone,role) VALUES (?,?,?,?,'agent')")
                         ->execute([$username, $hash, $fullName, $phone]);
                     $uid = $pdo->lastInsertId();
-                    $pdo->prepare("INSERT INTO agents (user_id,supervisor_id,area) VALUES (?,?,?)")
-                        ->execute([$uid, $supId, $area]);
+                    $pdo->prepare("INSERT INTO agents (user_id,supervisor_id,area,lat,lng) VALUES (?,?,?,?,?)")
+                        ->execute([$uid, $supId, $area, $lat, $lng]);
                     $pdo->commit();
                     $success = "Agent '$fullName' created and assigned successfully.";
                 } catch (Exception $e) {
@@ -48,6 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status   = $_POST['status'] ?? 'active';
         $supId    = (int)($_POST['supervisor_id'] ?? 0);
         $pass     = $_POST['password'] ?? '';
+        $lat      = !empty($_POST['lat']) ? (float)$_POST['lat'] : 23.81030000;
+        $lng      = !empty($_POST['lng']) ? (float)$_POST['lng'] : 90.41250000;
 
         if (!$uid || !$agentId || !$fullName || !$supId) {
             $error = 'Agent ID, name, and supervisor are required.';
@@ -56,8 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
                 $pdo->prepare("UPDATE users SET full_name=?, phone=?, status=? WHERE id=?")
                     ->execute([$fullName, $phone, $status, $uid]);
-                $pdo->prepare("UPDATE agents SET supervisor_id=?, area=? WHERE id=?")
-                    ->execute([$supId, $area, $agentId]);
+                $pdo->prepare("UPDATE agents SET supervisor_id=?, area=?, lat=?, lng=? WHERE id=?")
+                    ->execute([$supId, $area, $lat, $lng, $agentId]);
                 if ($pass) { 
                     $pdo->prepare("UPDATE users SET password=? WHERE id=?")
                         ->execute([password_hash($pass, PASSWORD_DEFAULT), $uid]); 
@@ -82,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $agents = $pdo->query("
-    SELECT a.id as agent_id, a.area, a.supervisor_id, u.id as user_id, u.username, u.full_name, u.phone, u.status, u.created_at,
+    SELECT a.id as agent_id, a.area, a.supervisor_id, a.lat, a.lng, u.id as user_id, u.username, u.full_name, u.phone, u.status, u.created_at,
            sup.full_name as supervisor_name,
            (SELECT COUNT(*) FROM retailers r WHERE r.agent_id=a.id) as retailer_count,
            (SELECT COALESCE(SUM(l.amount),0) FROM ledger l WHERE l.agent_id=a.id AND l.type='deposit') as total_deposit,
@@ -198,6 +202,10 @@ $currency = getSetting('currency_symbol', '৳');
       </div>
       <div class="form-group"><label class="form-label">Password *</label><input type="password" name="password" class="form-control" required></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Latitude</label><input type="text" name="lat" class="form-control" placeholder="23.8103"></div>
+      <div class="form-group"><label class="form-label">Longitude</label><input type="text" name="lng" class="form-control" placeholder="90.4125"></div>
+    </div>
   </div>
   <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalAdd')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button></div>
   </form></div>
@@ -236,6 +244,10 @@ $currency = getSetting('currency_symbol', '৳');
       </div>
       <div class="form-group"><label class="form-label">New Password <span class="text-muted">(blank = no change)</span></label><input type="password" name="password" class="form-control"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Latitude</label><input type="text" name="lat" id="eLat" class="form-control" placeholder="23.8103"></div>
+      <div class="form-group"><label class="form-label">Longitude</label><input type="text" name="lng" id="eLng" class="form-control" placeholder="90.4125"></div>
+    </div>
   </div>
   <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modalEdit')">Cancel</button><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button></div>
   </form></div>
@@ -254,6 +266,8 @@ function openEdit(a){
   document.getElementById('eArea').value=a.area||'';
   document.getElementById('eStatus').value=a.status;
   document.getElementById('eSupId').value=a.supervisor_id||'';
+  document.getElementById('eLat').value=a.lat||'';
+  document.getElementById('eLng').value=a.lng||'';
   openModal('modalEdit');
 }
 function delAgent(uid,name){if(confirm('Remove agent "'+name+'"?')){document.getElementById('delUid').value=uid;document.getElementById('delForm').submit();}}
