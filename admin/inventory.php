@@ -21,44 +21,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     elseif ($action === 'add_lot') {
         $provider_id = (int)($_POST['provider_id'] ?? 0);
-        $product_id = (int)($_POST['product_id'] ?? 0);
-        $qty = (float)($_POST['qty'] ?? 0);
-        $buying_price = (float)($_POST['buying_price'] ?? 0);
-        $selling_price = (float)($_POST['selling_price'] ?? 0);
+        $items = $_POST['items'] ?? [];
         
-        if (!$provider_id || !$product_id || $qty <= 0) {
-            $error = 'Please fill all required fields correctly.';
+        if (!$provider_id || empty($items)) {
+            $error = 'Please select a provider and add at least one product.';
         } else {
             $pdo->beginTransaction();
             try {
-                // Fetch current product prices
-                $stmt = $pdo->prepare("SELECT buying_price, price FROM products WHERE id = ?");
-                $stmt->execute([$product_id]);
-                $prod = $stmt->fetch();
-                $old_buying_price = $prod['buying_price'];
-                $old_selling_price = $prod['price'];
-                
-                // Insert into warehouse_lots
-                $pdo->prepare("INSERT INTO warehouse_lots (provider_id, product_id, qty, buying_price, selling_price) VALUES (?, ?, ?, ?, ?)")
-                    ->execute([$provider_id, $product_id, $qty, $buying_price, $selling_price]);
-                $lot_id = $pdo->lastInsertId();
-                
-                // Update product prices
-                $pdo->prepare("UPDATE products SET buying_price = ?, price = ? WHERE id = ?")
-                    ->execute([$buying_price, $selling_price, $product_id]);
-                
-                // Insert price history if changed
-                if ($old_buying_price != $buying_price || $old_selling_price != $selling_price) {
-                    $pdo->prepare("INSERT INTO product_price_history (product_id, warehouse_lot_id, old_buying_price, new_buying_price, old_selling_price, new_selling_price, source) VALUES (?, ?, ?, ?, ?, ?, 'lot_addition')")
-                        ->execute([$product_id, $lot_id, $old_buying_price, $buying_price, $old_selling_price, $selling_price]);
+                $addedCount = 0;
+                foreach ($items as $item) {
+                    $product_id = (int)($item['product_id'] ?? 0);
+                    $qty = (float)($item['qty'] ?? 0);
+                    $buying_price = (float)($item['buying_price'] ?? 0);
+                    $selling_price = (float)($item['selling_price'] ?? 0);
+                    
+                    if (!$product_id || $qty <= 0) {
+                        continue;
+                    }
+                    
+                    // Fetch current product prices
+                    $stmt = $pdo->prepare("SELECT buying_price, price FROM products WHERE id = ?");
+                    $stmt->execute([$product_id]);
+                    $prod = $stmt->fetch();
+                    $old_buying_price = $prod['buying_price'];
+                    $old_selling_price = $prod['price'];
+                    
+                    // Insert into warehouse_lots
+                    $pdo->prepare("INSERT INTO warehouse_lots (provider_id, product_id, qty, buying_price, selling_price) VALUES (?, ?, ?, ?, ?)")
+                        ->execute([$provider_id, $product_id, $qty, $buying_price, $selling_price]);
+                    $lot_id = $pdo->lastInsertId();
+                    
+                    // Update product prices
+                    $pdo->prepare("UPDATE products SET buying_price = ?, price = ? WHERE id = ?")
+                        ->execute([$buying_price, $selling_price, $product_id]);
+                    
+                    // Insert price history if changed
+                    if ($old_buying_price != $buying_price || $old_selling_price != $selling_price) {
+                        $pdo->prepare("INSERT INTO product_price_history (product_id, warehouse_lot_id, old_buying_price, new_buying_price, old_selling_price, new_selling_price, source) VALUES (?, ?, ?, ?, ?, ?, 'lot_addition')")
+                            ->execute([$product_id, $lot_id, $old_buying_price, $buying_price, $old_selling_price, $selling_price]);
+                    }
+                    
+                    // Update inventory stock (add to existing)
+                    $pdo->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty_available = qty_available + ?")
+                        ->execute([$product_id, $qty, $qty]);
+                    
+                    $addedCount++;
                 }
                 
-                // Update inventory stock (add to existing)
-                $pdo->prepare("INSERT INTO inventory (product_id, qty_available) VALUES (?, ?) ON DUPLICATE KEY UPDATE qty_available = qty_available + ?")
-                    ->execute([$product_id, $qty, $qty]);
-                
-                $pdo->commit();
-                $success = 'Warehouse lot added and inventory updated successfully.';
+                if ($addedCount > 0) {
+                    $pdo->commit();
+                    $success = "Warehouse lot with $addedCount product(s) added successfully.";
+                } else {
+                    $pdo->rollBack();
+                    $error = 'No valid products were added to the lot.';
+                }
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $error = 'Error adding lot: ' . $e->getMessage();
@@ -94,6 +110,13 @@ $currency = getSetting('currency_symbol', '৳');
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
+<style>
+  /* Override default modal max-width for add lot to fit table */
+  #modalAddLot .modal {
+    max-width: 800px;
+    width: 95vw;
+  }
+</style>
 </head>
 <body>
 <div class="layout-wrapper">
@@ -199,7 +222,7 @@ $currency = getSetting('currency_symbol', '৳');
     <form method="POST">
       <input type="hidden" name="action" value="add_lot">
       <div class="modal-body">
-        <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end;">
+        <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
           <div style="flex: 1;">
             <label class="form-label">Provider</label>
             <select name="provider_id" class="form-control form-select" required>
@@ -207,23 +230,30 @@ $currency = getSetting('currency_symbol', '৳');
               <?php foreach ($providers as $prov): ?><option value="<?= $prov['id'] ?>"><?= htmlspecialchars($prov['name']) ?> (<?= ucfirst($prov['type']) ?>)</option><?php endforeach; ?>
             </select>
           </div>
-          <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddLot'); openModal('modalAddProvider');"><i class="fas fa-plus"></i> New</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddLot'); openModal('modalAddProvider');"><i class="fas fa-plus"></i> New Provider</button>
         </div>
-        <div class="form-group"><label class="form-label">Product</label>
-          <select name="product_id" id="stockPid" class="form-control form-select" required onchange="updatePriceFields(this)">
-            <option value="" data-bp="0" data-sp="0">— Select Product —</option>
-            <?php foreach ($inventory as $inv): ?><option value="<?= $inv['id'] ?>" data-bp="<?= $inv['buying_price'] ?? 0 ?>" data-sp="<?= $inv['price'] ?>"><?= htmlspecialchars($inv['name']) ?> (current stock: <?= $inv['qty_available'] ?>)</option><?php endforeach; ?>
-          </select>
-        </div>
-        <div class="form-group"><label class="form-label">Quantity Arrived</label>
-          <input type="number" name="qty" id="stockQty" class="form-control" min="0" step="0.01" required placeholder="0.00">
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Buying Price (<?= $currency ?>) per unit</label>
-            <input type="number" name="buying_price" id="lotBuyingPrice" class="form-control" min="0" step="0.01" required placeholder="0.00">
+
+        <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="fw-700 fs-14 text-primary-color"><i class="fas fa-boxes"></i> Lot Products</span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addLotProductRow()"><i class="fas fa-plus"></i> Add Product</button>
           </div>
-          <div class="form-group"><label class="form-label">Selling Price (<?= $currency ?>) per unit</label>
-            <input type="number" name="selling_price" id="lotSellingPrice" class="form-control" min="0" step="0.01" required placeholder="0.00">
+          
+          <div style="overflow-x:auto;">
+            <table class="tbl" style="min-width: 650px;">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th style="width: 100px;" class="text-right">Qty</th>
+                  <th style="width: 140px;" class="text-right">Buying Price</th>
+                  <th style="width: 140px;" class="text-right">Selling Price</th>
+                  <th style="width: 50px;"></th>
+                </tr>
+              </thead>
+              <tbody id="lotProductsTbody">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -261,24 +291,83 @@ $currency = getSetting('currency_symbol', '৳');
 </div>
 
 <script>
-function openModal(id){document.getElementById(id).classList.add('active');}
-function closeModal(id){document.getElementById(id).classList.remove('active');}
-function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
-function quickUpdate(id, name, current) {
-  const sel = document.getElementById('stockPid');
-  sel.value = id;
-  updatePriceFields(sel);
-  openModal('modalAddLot');
+let lotRowIndex = 0;
+const productsData = <?= json_encode($inventory, JSON_UNESCAPED_UNICODE) ?>;
+const currencySymbol = '<?= $currency ?>';
+
+function addLotProductRow(productId = '', qty = '', bp = '', sp = '') {
+  const tbody = document.getElementById('lotProductsTbody');
+  const tr = document.createElement('tr');
+  tr.id = 'lot-row-' + lotRowIndex;
+  
+  let optionsHtml = '<option value="" data-bp="0" data-sp="0">— Select Product —</option>';
+  productsData.forEach(p => {
+    const selected = (p.id == productId) ? 'selected' : '';
+    optionsHtml += `<option value="${p.id}" ${selected} data-bp="${p.buying_price || 0}" data-sp="${p.price}">${p.name} (stock: ${p.qty_available})</option>`;
+  });
+  
+  tr.innerHTML = `
+    <td>
+      <select name="items[${lotRowIndex}][product_id]" class="form-control form-select" required onchange="onLotProductChange(this, ${lotRowIndex})">
+        ${optionsHtml}
+      </select>
+    </td>
+    <td>
+      <input type="number" name="items[${lotRowIndex}][qty]" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0">
+    </td>
+    <td>
+      <div class="input-group"><span class="input-prefix">${currencySymbol}</span><input type="number" name="items[${lotRowIndex}][buying_price]" id="bp-${lotRowIndex}" class="form-control text-right" min="0" step="0.01" value="${bp}" required placeholder="0.00"></div>
+    </td>
+    <td>
+      <div class="input-group"><span class="input-prefix">${currencySymbol}</span><input type="number" name="items[${lotRowIndex}][selling_price]" id="sp-${lotRowIndex}" class="form-control text-right" min="0" step="0.01" value="${sp}" required placeholder="0.00"></div>
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeLotProductRow(${lotRowIndex})"><i class="fas fa-trash-alt"></i></button>
+    </td>
+  `;
+  
+  tbody.appendChild(tr);
+  lotRowIndex++;
 }
-function updatePriceFields(selectEl) {
+
+function removeLotProductRow(index) {
+  const tr = document.getElementById('lot-row-' + index);
+  if (tr) tr.remove();
+}
+
+function onLotProductChange(selectEl, index) {
   const option = selectEl.options[selectEl.selectedIndex];
   if(option.value) {
-    document.getElementById('lotBuyingPrice').value = option.dataset.bp;
-    document.getElementById('lotSellingPrice').value = option.dataset.sp;
+    document.getElementById('bp-' + index).value = option.dataset.bp;
+    document.getElementById('sp-' + index).value = option.dataset.sp;
   } else {
-    document.getElementById('lotBuyingPrice').value = '';
-    document.getElementById('lotSellingPrice').value = '';
+    document.getElementById('bp-' + index).value = '';
+    document.getElementById('sp-' + index).value = '';
   }
+}
+
+function openModal(id){
+  if (id === 'modalAddLot') {
+    const tbody = document.getElementById('lotProductsTbody');
+    if (tbody.children.length === 0) {
+      addLotProductRow();
+    }
+  }
+  document.getElementById(id).classList.add('active');
+}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+function closeModalOuter(e,id){if(e.target.id===id)closeModal(id);}
+
+function quickUpdate(id, name, current) {
+  const tbody = document.getElementById('lotProductsTbody');
+  tbody.innerHTML = '';
+  const p = productsData.find(x => x.id == id);
+  if (p) {
+    addLotProductRow(p.id, '', p.buying_price || 0, p.price);
+  } else {
+    addLotProductRow();
+  }
+  openModal('modalAddLot');
 }
 </script>
 </body>
