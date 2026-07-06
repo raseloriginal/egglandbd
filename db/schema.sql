@@ -163,6 +163,7 @@ CREATE TABLE `products` (
   `buying_price` DECIMAL(10,2) DEFAULT 0.00,
   `price` DECIMAL(10,2) DEFAULT 0.00,
   `status` ENUM('active','inactive') DEFAULT 'active',
+  `image` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
