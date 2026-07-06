@@ -148,6 +148,15 @@ $pending_demands = $pdo->query("
     ORDER BY d.created_at ASC
 ")->fetchAll();
 
+// Fetch pending demand line items to calculate required quantities inside JavaScript
+$pending_demand_items = $pdo->query("
+    SELECT di.demand_id, di.product_id, di.qty, p.name as product_name
+    FROM demand_items di
+    JOIN demands d ON d.id = di.demand_id
+    JOIN products p ON p.id = di.product_id
+    WHERE d.status IN ('pending', 'approved') AND d.is_deleted = 0
+")->fetchAll();
+
 // Fetch all dispatches for the view
 $dispatches = $pdo->query("
     SELECT d.*, dsr.name as dsr_name, w.qty as lot_qty, p.name as product_name
@@ -280,6 +289,11 @@ $currency = getSetting('currency_symbol', '৳');
           </div>
         </div>
 
+        <div id="demandedProductsSummary" style="margin-top: 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: #F9FAFB;">
+          <div style="font-weight: 700; font-size: 13px; color: var(--primary); margin-bottom: 10px;"><i class="fas fa-tasks"></i> Demanded Products Allocation</div>
+          <div id="demandProgressList"><p class="text-muted fs-12" style="margin:0;">No demands selected.</p></div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Destination</label>
@@ -336,6 +350,7 @@ $currency = getSetting('currency_symbol', '৳');
 <script>
 let dispatchRowIndex = 0;
 const lotsData = <?= json_encode($lots, JSON_UNESCAPED_UNICODE) ?>;
+const demandItems = <?= json_encode($pending_demand_items, JSON_UNESCAPED_UNICODE) ?>;
 const currencySymbol = '<?= $currency ?>';
 
 function addDispatchLotRow(lotId = '', qty = '') {
@@ -351,12 +366,12 @@ function addDispatchLotRow(lotId = '', qty = '') {
   
   tr.innerHTML = `
     <td>
-      <select name="items[${dispatchRowIndex}][warehouse_lot_id]" class="form-control form-select" required>
+      <select name="items[${dispatchRowIndex}][warehouse_lot_id]" class="form-control form-select" required onchange="updateDemandAllocationProgress()">
         ${optionsHtml}
       </select>
     </td>
     <td>
-      <input type="number" name="items[${dispatchRowIndex}][qty_dispatched]" id="disp-qty-${dispatchRowIndex}" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0.00" oninput="sumTotalDispatchQty()">
+      <input type="number" name="items[${dispatchRowIndex}][qty_dispatched]" id="disp-qty-${dispatchRowIndex}" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0.00" oninput="sumTotalDispatchQty(); updateDemandAllocationProgress();">
     </td>
     <td class="text-center">
       <button type="button" class="btn btn-danger btn-sm" onclick="removeDispatchLotRow(${dispatchRowIndex})"><i class="fas fa-trash-alt"></i></button>
@@ -366,12 +381,14 @@ function addDispatchLotRow(lotId = '', qty = '') {
   tbody.appendChild(tr);
   dispatchRowIndex++;
   sumTotalDispatchQty();
+  updateDemandAllocationProgress();
 }
 
 function removeDispatchLotRow(index) {
   const tr = document.getElementById('dispatch-row-' + index);
   if (tr) tr.remove();
   sumTotalDispatchQty();
+  updateDemandAllocationProgress();
 }
 
 function sumTotalDispatchQty() {
@@ -383,6 +400,72 @@ function sumTotalDispatchQty() {
   if (totalInput) {
     totalInput.value = total;
   }
+}
+
+function updateDemandAllocationProgress() {
+  const checkedDemandIds = Array.from(document.querySelectorAll('input[name="demand_ids[]"]:checked')).map(cb => parseInt(cb.value));
+  const listContainer = document.getElementById('demandProgressList');
+  
+  if (checkedDemandIds.length === 0) {
+    listContainer.innerHTML = '<p class="text-muted fs-12" style="margin:0;">No demands selected.</p>';
+    return;
+  }
+  
+  // Calculate demanded quantity per product
+  const demanded = {};
+  demandItems.forEach(item => {
+    if (checkedDemandIds.includes(parseInt(item.demand_id))) {
+      const pid = parseInt(item.product_id);
+      if (!demanded[pid]) {
+        demanded[pid] = { name: item.product_name, qty: 0 };
+      }
+      demanded[pid].qty += parseFloat(item.qty);
+    }
+  });
+  
+  // Calculate allocated quantity per product from dispatch rows
+  const allocated = {};
+  const rows = document.getElementById('dispatchLotsTbody').children;
+  for (let row of rows) {
+    const select = row.querySelector('select');
+    const qtyInput = row.querySelector('input[type="number"]');
+    if (select && qtyInput) {
+      const lotId = parseInt(select.value);
+      const qty = parseFloat(qtyInput.value) || 0;
+      if (lotId) {
+        const lotObj = lotsData.find(l => l.id == lotId);
+        if (lotObj) {
+          const pid = parseInt(lotObj.product_id);
+          if (!allocated[pid]) {
+            allocated[pid] = 0;
+          }
+          allocated[pid] += qty;
+        }
+      }
+    }
+  }
+  
+  // Render progress HTML
+  let html = '';
+  Object.keys(demanded).forEach(pid => {
+    const d = demanded[pid].qty;
+    const a = allocated[pid] || 0;
+    const p = d > 0 ? Math.min(100, (a / d) * 100) : 0;
+    
+    html += `
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 4px;">
+          <span>${demanded[pid].name}</span>
+          <span style="color: ${a >= d ? '#10B981' : '#F5A623'}">${a.toFixed(0)} / ${d.toFixed(0)} units (${p.toFixed(0)}%)</span>
+        </div>
+        <div style="height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden;">
+          <div style="height: 100%; width: ${p}%; background: ${p >= 100 ? '#10B981' : '#F5A623'}; transition: width 0.3s; border-radius: 4px;"></div>
+        </div>
+      </div>
+    `;
+  });
+  
+  listContainer.innerHTML = html || '<p class="text-muted fs-12" style="margin:0;">No products requested in selected demands.</p>';
 }
 
 function openModal(id){
@@ -415,6 +498,7 @@ function calcTotalQty() {
       qtyInput.value = total;
     }
   }
+  updateDemandAllocationProgress();
 }
 </script>
 </body>
