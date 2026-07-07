@@ -81,6 +81,43 @@ if ($agentId) {
 }
 
 $currency = getSetting('currency_symbol', '৳');
+
+// Fetch products and their price history for the notice slider
+$products_stmt = $pdo->query("
+    SELECT p.*,
+           (SELECT old_buying_price 
+            FROM product_price_history 
+            WHERE product_id = p.id AND old_buying_price <> new_buying_price 
+            ORDER BY id DESC LIMIT 1) as prev_buying_price
+    FROM products p
+    WHERE p.status = 'active'
+    ORDER BY p.name
+");
+$slider_products = $products_stmt->fetchAll();
+
+$marquee_content = "";
+if (!empty($slider_products)) {
+    $ticker_items = [];
+    foreach ($slider_products as $p) {
+        $buying_price = (float)$p['buying_price'];
+        $prev_price = $p['prev_buying_price'] !== null ? (float)$p['prev_buying_price'] : $buying_price;
+        $diff = $buying_price - $prev_price;
+        $percent = $prev_price > 0 ? ($diff / $prev_price) * 100 : 0;
+        
+        $change_str = "";
+        if ($percent > 0) {
+            $change_str = '<span class="text-red-500 font-black">▲ ' . number_format($percent, 1) . '%</span>';
+        } elseif ($percent < 0) {
+            $change_str = '<span class="text-green-600 font-black">▼ ' . number_format(abs($percent), 1) . '%</span>';
+        } else {
+            $change_str = '<span class="text-slate-400 font-medium">0%</span>';
+        }
+        
+        $ticker_items[] = '🥚 <span class="text-slate-700 font-bold">' . htmlspecialchars($p['name']) . '</span>: <span class="text-slate-900 font-extrabold">' . $currency . number_format($buying_price, 2) . '</span> (' . $change_str . ')';
+    }
+    $ticker_text = implode('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', $ticker_items);
+    $marquee_content = $ticker_text . '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' . $ticker_text;
+}
 ?>
 <!DOCTYPE html>
 <html lang="bn" class="h-full">
@@ -121,34 +158,69 @@ $currency = getSetting('currency_symbol', '৳');
 </script>
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+.animate-marquee {
+  display: inline-block;
+  animation: marquee 25s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+</style>
 </head>
 <body class="bg-brandbg min-h-full flex flex-col font-sans antialiased text-slate-800 pb-20">
 
 <!-- Header -->
-<header class="bg-primary text-white h-14 flex items-center px-4 sticky top-0 z-50 shadow-md">
+<header class="bg-primary text-white py-2 px-4 sticky top-0 z-50 shadow-md">
   <div class="flex items-center gap-3 w-full">
-    <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
-    <div class="flex-1">
-      <h1 class="text-sm font-bold leading-tight">এগল্যান্ড বাংলাদেশ</h1>
-      <p class="text-[10px] text-white/60 font-semibold">এজেন্ট প্যানেল</p>
+    <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm shrink-0">E</div>
+    <div class="flex-1 min-w-0">
+      <p class="text-[9px] uppercase tracking-wider text-white/70 font-bold"><?= date('H') < 12 ? 'শুভ সকাল' : (date('H') < 17 ? 'শুভ দুপুর' : 'শুভ সন্ধ্যা') ?></p>
+      <h1 class="text-sm font-black leading-tight truncate"><?= htmlspecialchars($u['full_name'] ?? 'এজেন্ট') ?></h1>
+      <p class="text-[9px] text-white/60 font-medium"><?= date('l, d F Y') ?></p>
     </div>
-    <button class="text-white/80 hover:text-white p-1 text-lg relative">
+    <button class="text-white/80 hover:text-white p-1 text-lg relative shrink-0">
       <i class="fas fa-bell"></i>
     </button>
-    <div class="w-8 h-8 rounded-full bg-gold/20 border border-gold/40 text-gold flex items-center justify-center font-bold text-sm cursor-pointer hover:bg-gold/30 transition-colors" onclick="window.location='/egglandbd/logout.php'">
+    <div class="w-8 h-8 rounded-full bg-gold/20 border border-gold/40 text-gold flex items-center justify-center font-bold text-sm cursor-pointer hover:bg-gold/30 transition-colors shrink-0" onclick="window.location='/egglandbd/logout.php'">
       <?= strtoupper(substr($u['full_name'] ?? 'A', 0, 1)) ?>
     </div>
   </div>
 </header>
 
+<!-- Notice Ticker / Auto Slider -->
+<?php if (!empty($marquee_content)): ?>
+<div onclick="openRateModal()" class="bg-amber-50 border-b border-amber-100 py-1.5 px-4 overflow-hidden shadow-sm flex items-center cursor-pointer hover:bg-amber-100 transition-colors">
+  <div class="max-w-2xl mx-auto flex items-center gap-3 w-full">
+    <span class="bg-gold text-primary text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 animate-pulse shadow-sm z-10">
+      <i class="fas fa-bullhorn"></i> রেট আপডেট
+    </span>
+    <div class="flex-1 overflow-hidden relative whitespace-nowrap">
+      <div class="animate-marquee whitespace-nowrap text-xs font-bold inline-block">
+        <?= $marquee_content ?>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <!-- Main Content -->
 <main class="flex-1">
   <!-- Hero Section -->
-  <div class="bg-gradient-to-b from-primary to-primary-light text-white pt-6 pb-24 px-4 rounded-b-[2rem] shadow-lg">
+  <div class="bg-gradient-to-b from-primary to-primary-light text-white pt-4 pb-20 px-4 rounded-b-[2rem] shadow-lg">
     <div class="max-w-2xl mx-auto">
-      <p class="text-xs uppercase tracking-wider text-white/60 font-bold"><?= date('H') < 12 ? 'শুভ সকাল' : (date('H') < 17 ? 'শুভ দুপুর' : 'শুভ সন্ধ্যা') ?></p>
-      <h2 class="text-2xl font-black mt-0.5"><?= htmlspecialchars($u['full_name'] ?? 'এজেন্ট') ?></h2>
-      <p class="text-xs text-white/50 mt-0.5 font-medium"><?= date('l, d F Y') ?></p>
+      <h2 class="text-lg font-bold">ড্যাশবোর্ড ওভারভিউ</h2>
     </div>
   </div>
 
@@ -311,6 +383,58 @@ $currency = getSetting('currency_symbol', '৳');
   </div>
 </main>
 
+<!-- Rate Details Modal -->
+<div id="rateModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
+    <!-- Header -->
+    <div class="bg-primary text-white p-5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-bullhorn text-gold text-lg animate-bounce"></i>
+        <h3 class="font-extrabold text-base">আজকের রেট লিস্ট</h3>
+      </div>
+      <button onclick="closeRateModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <!-- Body -->
+    <div class="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+      <?php if (!empty($slider_products)): ?>
+        <?php foreach ($slider_products as $p): ?>
+          <?php
+            $buying_price = (float)$p['buying_price'];
+            $prev_price = $p['prev_buying_price'] !== null ? (float)$p['prev_buying_price'] : $buying_price;
+            $diff = $buying_price - $prev_price;
+            $percent = $prev_price > 0 ? ($diff / $prev_price) * 100 : 0;
+          ?>
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100/50 hover:bg-slate-100/30 transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🥚</span>
+              <div>
+                <span class="font-bold text-slate-800 text-sm block leading-tight"><?= htmlspecialchars($p['name']) ?></span>
+                <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider"><?= htmlspecialchars($p['unit_type'] ?? 'Pcs') ?></span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-black text-slate-900 text-sm"><?= $currency ?><?= number_format($buying_price, 2) ?></div>
+              <div class="text-[10px] mt-0.5 font-bold">
+                <?php if ($percent > 0): ?>
+                  <span class="text-red-500">▲ <?= number_format($percent, 1) ?>% বৃদ্ধি</span>
+                <?php elseif ($percent < 0): ?>
+                  <span class="text-green-600">▼ <?= number_format(abs($percent), 1) ?>% হ্রাস</span>
+                <?php else: ?>
+                  <span class="text-slate-400 font-medium">0%</span>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="text-center py-6 text-slate-400 text-sm">কোনো প্রোডাক্ট পাওয়া যায়নি</div>
+      <?php endif; ?>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom Nav -->
 <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
   <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
@@ -393,6 +517,33 @@ function filterChart(days, btn) {
   // For demo, same data; in production, fetch via AJAX
   initChart(labels, data7);
 }
+
+function openRateModal() {
+  const modal = document.getElementById('rateModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+}
+
+function closeRateModal() {
+  const modal = document.getElementById('rateModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('rateModal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeRateModal();
+      }
+    });
+  }
+});
 </script>
 </body>
 </html>
