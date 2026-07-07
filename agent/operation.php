@@ -291,12 +291,6 @@ $currency = getSetting('currency_symbol', '৳');
       <button class="py-3 bg-green-50 text-green-600 hover:bg-green-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-green-200/50 transition-colors" onclick="updateDelivery('completed')">
         <i class="fas fa-check-circle"></i> সম্পন্ন
       </button>
-      <button class="py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-red-200/50 transition-colors" onclick="updateDelivery('due')">
-        <i class="fas fa-clock"></i> বকেয়া
-      </button>
-      <button class="py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-blue-200/50 transition-colors" onclick="updateDelivery('partial')">
-        <i class="fas fa-boxes"></i> আংশিক
-      </button>
       <button class="py-3 bg-slate-50 text-slate-500 hover:bg-slate-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-slate-200/50 transition-colors" onclick="updateDelivery('cancelled')">
         <i class="fas fa-times-circle"></i> বাতিল
       </button>
@@ -368,7 +362,7 @@ $currency = getSetting('currency_symbol', '৳');
 
 <script>
 // ===== DATA FROM PHP =====
-const RETAILERS = <?= json_encode($retailers, JSON_UNESCAPED_UNICODE) ?>;
+let RETAILERS = <?= json_encode($retailers, JSON_UNESCAPED_UNICODE) ?>;
 const PRODUCTS  = <?= json_encode($products, JSON_UNESCAPED_UNICODE) ?>;
 const CURRENCY  = '<?= $currency ?>';
 const MAP_LAT   = <?= (float)$mapLat ?>;
@@ -421,12 +415,24 @@ function initMap() {
   loadSalesMarkers();
 }
 
-function makeIcon(color, iconHtml) {
+function makeIcon(color, iconHtml, label) {
+  const badgeClass = color === '#6B7280' ? 'bg-slate-800/95 text-white border-slate-700' : (color === '#16A34A' ? 'bg-green-600/95 text-white border-green-500' : 'bg-blue-600/95 text-white border-blue-500');
   return L.divIcon({
     className: '',
-    html: `<div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.7);">
-      <span style="transform:rotate(45deg);font-size:14px;line-height:1;color:#fff;">${iconHtml}</span>
-    </div>`,
+    html: `
+      <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+        <!-- Floating Label Card -->
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 ${badgeClass} text-[9px] font-black rounded-xl shadow-lg shadow-black/15 whitespace-nowrap border select-none z-10 leading-none">
+          ${label}
+        </div>
+        <!-- Little arrow below label -->
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-1.5 h-1.5 rotate-45 z-0" style="background-color: ${color}; opacity: 0.95;"></div>
+        <!-- Droplet Pin Icon -->
+        <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid #fff;">
+          <span style="transform:rotate(45deg);font-size:13px;color:#fff;display:flex;align-items:center;justify-content:center;">${iconHtml}</span>
+        </div>
+      </div>
+    `,
     iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36]
   });
 }
@@ -438,9 +444,11 @@ function loadSalesMarkers() {
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
     const hasOrder = parseInt(r.has_order) > 0;
-    const icon = hasOrder ? makeIcon('#16A34A', '<i class="fas fa-check"></i>') : makeIcon('#6B7280', '<i class="fas fa-store"></i>');
+    const color = hasOrder ? '#16A34A' : '#6B7280';
+    const iconHtml = hasOrder ? '<i class="fas fa-check"></i>' : '<i class="fas fa-store"></i>';
+    const label = r.shop_name ? r.shop_name : r.name;
+    const icon = makeIcon(color, iconHtml, label);
     const marker = L.marker([r.lat, r.lng], {icon}).addTo(mapInstance);
-    marker.bindTooltip(r.name, {permanent: false, direction: 'top', className: 'map-tooltip'});
     marker.on('click', () => {
       if (hasOrder) openOrderWarning(r);
       else openNewOrder(r);
@@ -456,9 +464,11 @@ function loadDelivMarkers() {
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
     const hasDelivery = parseInt(r.has_delivery) > 0;
-    const icon = hasDelivery ? makeIcon('#2563EB', '<i class="fas fa-truck"></i>') : makeIcon('#6B7280', '<i class="fas fa-store"></i>');
+    const color = hasDelivery ? '#2563EB' : '#6B7280';
+    const iconHtml = hasDelivery ? '<i class="fas fa-truck"></i>' : '<i class="fas fa-store"></i>';
+    const label = r.shop_name ? r.shop_name : r.name;
+    const icon = makeIcon(color, iconHtml, label);
     const marker = L.marker([r.lat, r.lng], {icon}).addTo(mapInstance);
-    marker.bindTooltip(r.name, {permanent: false, direction: 'top'});
     marker.on('click', () => {
       if (hasDelivery) openDelivery(r);
       else openReadySale(r);
@@ -469,6 +479,28 @@ function loadDelivMarkers() {
 
 // ===== TAB SWITCH =====
 function switchTab(tab) {
+  if (tab === currentTab) return;
+  
+  const icon = tab === 'sales' ? document.querySelector('#tabSales i') : document.querySelector('#tabDelivery i');
+  const ogClass = icon.className;
+  icon.className = 'fas fa-spinner fa-spin';
+
+  fetch(BASE_URL + '/api/agent_retailers.php')
+    .then(r => r.json())
+    .then(data => {
+      icon.className = ogClass;
+      if (data.success) {
+        RETAILERS = data.retailers;
+      }
+      executeTabSwitch(tab);
+    })
+    .catch(() => {
+      icon.className = ogClass;
+      executeTabSwitch(tab);
+    });
+}
+
+function executeTabSwitch(tab) {
   currentTab = tab;
   closeAllSheets();
   
@@ -540,36 +572,93 @@ function renderProductList() {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const item = document.createElement('div');
-    item.className = 'flex items-center justify-between gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100';
+    item.className = 'flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-3';
     item.innerHTML = `
-      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm shrink-0"><i class="fas fa-egg"></i></div>
-      <div class="flex-1 min-w-0">
-        <div class="text-xs font-bold text-slate-800 truncate">${p.name}</div>
-        <div class="text-[11px] text-slate-400 font-semibold">${CURRENCY}${parseFloat(p.price).toLocaleString()} / ${p.unit_type}</div>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
+          <i class="fas fa-egg"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-extrabold text-slate-800 truncate">${p.name}</div>
+          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">কেনার মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toLocaleString()} / ${p.unit_type}</div>
+        </div>
       </div>
-      <div class="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden shrink-0">
-        <button class="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-sm transition-colors" onclick="changeQty(${p.id}, -1, ${p.price})">−</button>
-        <input class="w-10 text-center text-xs font-bold text-slate-800 outline-none" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id}, ${p.price})">
-        <button class="w-8 h-8 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-sm transition-colors" onclick="changeQty(${p.id}, 1, ${p.price})">+</button>
+      
+      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-50">
+        <!-- Price Input -->
+        <div class="flex-1 relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
+          <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
+                 id="price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updatePrice(${p.id})">
+          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
+        </div>
+        
+        <!-- Qty Input -->
+        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeQty(${p.id}, -1)">−</button>
+          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeQty(${p.id}, 1)">+</button>
+        </div>
       </div>`;
     container.appendChild(item);
   });
   updateOrderTotal();
 }
 
-function changeQty(productId, delta, price) {
-  const input = document.getElementById('qty_' + productId);
-  let val = parseInt(input.value || '0') + delta;
+function changeQty(productId, delta) {
+  const qtyInput = document.getElementById('qty_' + productId);
+  const priceInput = document.getElementById('price_' + productId);
+  let price = parseFloat(priceInput.value || '0');
+  const prod = PRODUCTS.find(p => p.id == productId);
+  const bp = parseFloat(prod.buying_price || 0);
+  if (price < bp) {
+    price = bp;
+    priceInput.value = bp;
+  }
+  
+  let val = parseInt(qtyInput.value || '0') + delta;
   if (val < 0) val = 0;
-  input.value = val;
-  if (val > 0) orderItems[productId] = {qty: val, price: parseFloat(price)};
+  qtyInput.value = val;
+  
+  if (val > 0) orderItems[productId] = {qty: val, price: price};
   else delete orderItems[productId];
   updateOrderTotal();
 }
 
-function updateTotal(productId, price) {
-  const val = parseInt(document.getElementById('qty_' + productId)?.value || '0');
-  if (val > 0) orderItems[productId] = {qty: val, price: parseFloat(price)};
+function updatePrice(productId) {
+  const qtyInput = document.getElementById('qty_' + productId);
+  const priceInput = document.getElementById('price_' + productId);
+  const qty = parseInt(qtyInput.value || '0');
+  let price = parseFloat(priceInput.value || '0');
+  
+  const prod = PRODUCTS.find(p => p.id == productId);
+  const bp = parseFloat(prod.buying_price || 0);
+  if (price < bp) {
+    alert('বিক্রয় মূল্য কেনার মূল্য (' + bp + ') এর নিচে হতে পারে না।');
+    price = bp;
+    priceInput.value = bp;
+  }
+  
+  if (qty > 0) {
+    orderItems[productId] = {qty: qty, price: price};
+    updateOrderTotal();
+  }
+}
+
+function updateTotal(productId) {
+  const qtyInput = document.getElementById('qty_' + productId);
+  const priceInput = document.getElementById('price_' + productId);
+  const qty = parseInt(qtyInput.value || '0');
+  let price = parseFloat(priceInput.value || '0');
+  
+  const prod = PRODUCTS.find(p => p.id == productId);
+  const bp = parseFloat(prod.buying_price || 0);
+  if (price < bp) {
+    price = bp;
+    priceInput.value = bp;
+  }
+  
+  if (qty > 0) orderItems[productId] = {qty: qty, price: price};
   else delete orderItems[productId];
   updateOrderTotal();
 }
@@ -581,7 +670,12 @@ function updateOrderTotal() {
 }
 
 function placeOrder() {
-  const items = Object.entries(orderItems).map(([pid, item]) => ({product_id: pid, qty: item.qty, price: item.price}));
+  const items = Object.entries(orderItems).map(([pid, item]) => {
+    const prod = PRODUCTS.find(p => p.id == pid);
+    const bp = parseFloat(prod.buying_price || 0);
+    const finalPrice = item.price < bp ? bp : item.price;
+    return {product_id: pid, qty: item.qty, price: finalPrice};
+  });
   if (items.length === 0) { alert('অনুগ্রহ করে অন্তত একটি পণ্য সিলেক্ট করুন।'); return; }
 
   const btn = document.getElementById('btnPlaceOrder');
@@ -653,16 +747,33 @@ function openReadySale(retailer) {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const d = document.createElement('div');
-    d.className = 'flex items-center justify-between gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100';
+    d.className = 'flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-3';
     d.innerHTML = `
-      <div class="flex-1 min-w-0">
-        <div class="text-xs font-bold text-slate-800 truncate">${p.name}</div>
-        <div class="text-[10px] text-slate-400 font-semibold">${p.unit_type}</div>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
+          <i class="fas fa-egg"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-extrabold text-slate-800 truncate">${p.name}</div>
+          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">কেনার মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toLocaleString()} / ${p.unit_type}</div>
+        </div>
       </div>
-      <div class="flex items-center gap-1.5 shrink-0">
-        <input class="w-14 px-2 py-1 text-xs text-center border border-slate-200 rounded-lg text-slate-800 outline-none font-bold" placeholder="Qty" id="rs_qty_${p.id}" value="" type="number" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
-        <span class="text-slate-400 text-xs">×</span>
-        <input class="w-16 px-2 py-1 text-xs text-center border border-slate-200 rounded-lg text-slate-800 outline-none font-bold" placeholder="Price" id="rs_price_${p.id}" value="${p.price}" type="number" min="0" oninput="updateRSTotal(${p.id})">
+      
+      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-50">
+        <!-- Price Input -->
+        <div class="flex-1 relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
+          <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
+                 id="rs_price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updateRSTotal(${p.id})">
+          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
+        </div>
+        
+        <!-- Qty Input -->
+        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeRSQty(${p.id}, -1, ${p.price})">−</button>
+          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="rs_qty_${p.id}" value="0" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeRSQty(${p.id}, 1, ${p.price})">+</button>
+        </div>
       </div>`;
     container.appendChild(d);
   });
@@ -676,6 +787,14 @@ function updateRSTotal(productId, defaultPrice) {
   if (qty > 0) readySaleItems[productId] = {qty, price};
   else delete readySaleItems[productId];
   updateRSTotalDisplay();
+}
+
+function changeRSQty(productId, delta, defaultPrice) {
+  const qtyInput = document.getElementById('rs_qty_' + productId);
+  let val = parseInt(qtyInput.value || '0') + delta;
+  if (val < 0) val = 0;
+  qtyInput.value = val;
+  updateRSTotal(productId, defaultPrice);
 }
 
 // ===== READY SALE TOTAL =====
@@ -915,7 +1034,27 @@ function submitAddRetailer(e) {
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', initMap);
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+  const retailerId = urlParams.get('retailer_id');
+  
+  if (action === 'new_order' && retailerId) {
+    const retailer = RETAILERS.find(r => r.id == retailerId);
+    if (retailer) {
+      // Small delay to ensure map and sheets are fully initialized visually
+      setTimeout(() => {
+        if (parseInt(retailer.has_order) > 0) {
+          openOrderWarning(retailer);
+        } else {
+          openNewOrder(retailer);
+        }
+      }, 500);
+    }
+  }
+});
 </script>
 </body>
 </html>

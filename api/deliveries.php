@@ -50,13 +50,31 @@ if ($method === 'POST' && $action === 'ready_sale') {
 if ($method === 'GET' && $action === 'get_items') {
     $delId = (int)($_GET['delivery_id'] ?? 0);
     if (!$delId) { echo json_encode(['success'=>false,'message'=>'No delivery ID']); exit; }
-    $stmt = $pdo->prepare("
-        SELECT di.*, p.name as product_name, p.unit_type
-        FROM delivery_items di
-        JOIN products p ON p.id = di.product_id
-        WHERE di.delivery_id = ?
-    ");
-    $stmt->execute([$delId]);
+    
+    // Check if this delivery is associated with an order
+    $stmt_del = $pdo->prepare("SELECT order_id FROM deliveries WHERE id = ?");
+    $stmt_del->execute([$delId]);
+    $delivery = $stmt_del->fetch();
+    
+    if ($delivery && $delivery['order_id']) {
+        // If it is from an order, fetch from order_items
+        $stmt = $pdo->prepare("
+            SELECT oi.id, oi.product_id, oi.qty, oi.price, p.name as product_name, p.unit_type
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = ?
+        ");
+        $stmt->execute([$delivery['order_id']]);
+    } else {
+        // Otherwise, fetch from delivery_items
+        $stmt = $pdo->prepare("
+            SELECT di.id, di.product_id, di.qty, di.price, p.name as product_name, p.unit_type
+            FROM delivery_items di
+            JOIN products p ON p.id = di.product_id
+            WHERE di.delivery_id = ?
+        ");
+        $stmt->execute([$delId]);
+    }
     echo json_encode(['success'=>true,'items'=>$stmt->fetchAll()]);
     exit;
 }
