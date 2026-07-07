@@ -124,7 +124,7 @@ if ($method === 'POST' && $action === 'update_status') {
         }
         $pdo->prepare("UPDATE deliveries SET status=?, amount_collected=? WHERE id=? AND agent_id=?")
             ->execute([$status, $collected ?? 0, $delId, $agentId]);
-        
+         
         // Also update order status if this is from_order
         $s2 = $pdo->prepare("SELECT order_id FROM deliveries WHERE id=?");
         $s2->execute([$delId]);
