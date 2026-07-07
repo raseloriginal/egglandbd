@@ -97,6 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $demands = $stmt_dem->fetchAll();
                     
                     foreach ($demands as $dem) {
+                        $stmt_chk = $pdo->prepare("SELECT COUNT(*) FROM ledger WHERE note LIKE ?");
+                        $stmt_chk->execute(["%Demand #{$dem['id']}%"]);
+                        if ($stmt_chk->fetchColumn() > 0) {
+                            continue; // Skip already confirmed demand
+                        }
                         $pdo->prepare("INSERT INTO ledger (agent_id, supervisor_id, type, amount, note) VALUES (?, ?, 'lot_delivery', ?, ?)")
                             ->execute([$dem['agent_id'], $supId, $dem['total_amount'], "Auto-generated from Hub Dispatch #$dispatch_id (Demand #{$dem['id']})"]);
                         $ledger_id = $pdo->lastInsertId();
@@ -119,6 +124,120 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $error = 'Error confirming hub dispatch: ' . $e->getMessage();
+            }
+        }
+    }
+
+    // Confirm Hub Demand Delivery individually
+    if ($action === 'confirm_hub_demand') {
+        $dispatch_id = (int)($_POST['dispatch_id'] ?? 0);
+        $demand_id = (int)($_POST['demand_id'] ?? 0);
+        if ($dispatch_id && $demand_id) {
+            $pdo->beginTransaction();
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT d.id FROM dispatches d
+                    JOIN dispatch_demands dd ON dd.dispatch_id = d.id
+                    JOIN demands dem ON dem.id = dd.demand_id
+                    WHERE d.id = ? AND dem.id = ? AND d.status = 'dispatched' AND d.destination_type = 'hub'
+                    AND dem.supervisor_id = ?
+                ");
+                $stmt->execute([$dispatch_id, $demand_id, $supId]);
+                $isValid = $stmt->fetch();
+                
+                if ($isValid) {
+                    $stmt_chk = $pdo->prepare("SELECT COUNT(*) FROM ledger WHERE note LIKE ?");
+                    $stmt_chk->execute(["%Demand #$demand_id%"]);
+                    if ($stmt_chk->fetchColumn() == 0) {
+                        $stmt_dem = $pdo->prepare("SELECT agent_id, total_amount FROM demands WHERE id = ?");
+                        $stmt_dem->execute([$demand_id]);
+                        $dem = $stmt_dem->fetch();
+                        
+                        $pdo->prepare("INSERT INTO ledger (agent_id, supervisor_id, type, amount, note) VALUES (?, ?, 'lot_delivery', ?, ?)")
+                            ->execute([$dem['agent_id'], $supId, $dem['total_amount'], "Auto-generated from Hub Dispatch #$dispatch_id (Demand #{$demand_id})"]);
+                        $ledger_id = $pdo->lastInsertId();
+                        
+                        $stmt_items = $pdo->prepare("SELECT product_id, qty, price FROM demand_items WHERE demand_id = ?");
+                        $stmt_items->execute([$demand_id]);
+                        $items = $stmt_items->fetchAll();
+                        
+                        foreach ($items as $item) {
+                            $pdo->prepare("INSERT INTO lot_items (ledger_id, product_id, qty, price) VALUES (?, ?, ?, ?)")
+                                ->execute([$ledger_id, $item['product_id'], $item['qty'], $item['price']]);
+                        }
+                    }
+                    
+                    // Check if all demands associated with this dispatch have ledger entries
+                    $stmt_all = $pdo->prepare("SELECT demand_id FROM dispatch_demands WHERE dispatch_id = ?");
+                    $stmt_all->execute([$dispatch_id]);
+                    $all_demands = $stmt_all->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    $all_confirmed = true;
+                    foreach ($all_demands as $did) {
+                        $stmt_chk_all = $pdo->prepare("SELECT COUNT(*) FROM ledger WHERE note LIKE ?");
+                        $stmt_chk_all->execute(["%Demand #$did%"]);
+                        if ($stmt_chk_all->fetchColumn() == 0) {
+                            $all_confirmed = false;
+                            break;
+                        }
+                    }
+                    
+                    if ($all_confirmed) {
+                        $pdo->prepare("UPDATE dispatches SET status = 'delivered' WHERE id = ?")->execute([$dispatch_id]);
+                    }
+                    
+                    $pdo->commit();
+                    $success = "Demand #$demand_id confirmed and lot delivery created.";
+                } else {
+                    $pdo->rollBack();
+                    $error = "Invalid or already confirmed hub demand.";
+                }
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Error confirming hub demand: ' . $e->getMessage();
+            }
+        }
+    }
+
+    // Update Demand Qty
+    if ($action === 'update_demand_qty') {
+        $demand_id = (int)($_POST['demand_id'] ?? 0);
+        $prodIds   = $_POST['product_id'] ?? [];
+        $qtys      = $_POST['qty'] ?? [];
+        
+        if ($demand_id && !empty($prodIds)) {
+            $pdo->beginTransaction();
+            try {
+                // Ensure this demand belongs to supervisor's agents
+                $stmt = $pdo->prepare("SELECT id FROM demands WHERE id = ? AND supervisor_id = ?");
+                $stmt->execute([$demand_id, $supId]);
+                if ($stmt->fetch()) {
+                    foreach ($prodIds as $idx => $pid) {
+                        $pid = (int)$pid;
+                        $qty = (float)($qtys[$idx] ?? 0);
+                        
+                        // Update demand_items
+                        $pdo->prepare("UPDATE demand_items SET qty = ?, amount = qty * price WHERE demand_id = ? AND product_id = ?")
+                            ->execute([$qty, $demand_id, $pid]);
+                    }
+                    
+                    // Recalculate totals
+                    $stmt_total = $pdo->prepare("SELECT SUM(qty) as t_qty, SUM(amount) as t_amt FROM demand_items WHERE demand_id = ?");
+                    $stmt_total->execute([$demand_id]);
+                    $totals = $stmt_total->fetch();
+                    
+                    $pdo->prepare("UPDATE demands SET total_qty = ?, total_amount = ? WHERE id = ?")
+                        ->execute([$totals['t_qty'] ?? 0, $totals['t_amt'] ?? 0, $demand_id]);
+                    
+                    $pdo->commit();
+                    $success = "Demand #$demand_id quantities updated successfully.";
+                } else {
+                    $pdo->rollBack();
+                    $error = "Unauthorized demand access.";
+                }
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Error updating demand: ' . $e->getMessage();
             }
         }
     }
@@ -187,6 +306,40 @@ if ($supId) {
     ");
     $stmt->execute([$supId]);
     $pendingHubDispatches = $stmt->fetchAll();
+
+    foreach ($pendingHubDispatches as &$phd) {
+        $stmt_demands = $pdo->prepare("
+            SELECT dem.id, dem.agent_id, dem.total_amount, u.full_name as agent_name,
+                   (SELECT COUNT(*) FROM ledger l WHERE l.note LIKE CONCAT('%Demand #', dem.id, '%')) as is_confirmed
+            FROM dispatch_demands dd
+            JOIN demands dem ON dem.id = dd.demand_id
+            JOIN agents a ON a.id = dem.agent_id
+            JOIN users u ON u.id = a.user_id
+            WHERE dd.dispatch_id = ? AND dem.supervisor_id = ?
+        ");
+        $stmt_demands->execute([$phd['id'], $supId]);
+        $phd['demands'] = $stmt_demands->fetchAll();
+        
+        foreach ($phd['demands'] as &$dem) {
+            $stmt_items = $pdo->prepare("
+                SELECT di.product_id, di.qty, di.price, p.name 
+                FROM demand_items di 
+                JOIN products p ON p.id = di.product_id 
+                WHERE di.demand_id = ?
+            ");
+            $stmt_items->execute([$dem['id']]);
+            $items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+            $dem['items'] = $items;
+            
+            $item_details = [];
+            foreach ($items as $item) {
+                $item_details[] = $item['name'] . ' (x' . number_format($item['qty'], 0) . ')';
+            }
+            $dem['product_details'] = implode(', ', $item_details);
+        }
+        unset($dem);
+    }
+    unset($phd);
 }
 
 $currency = getSetting('currency_symbol', '৳');
@@ -238,7 +391,9 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($pendingHubDispatches as $phd): ?>
+            <?php foreach ($pendingHubDispatches as $phd): 
+              $hasMultiple = count($phd['demands']) > 1;
+            ?>
             <tr>
               <td class="text-muted fs-12">#<?= $phd['id'] ?></td>
               <td class="fw-700"><?= htmlspecialchars($phd['dsr_name']) ?></td>
@@ -246,13 +401,58 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
               <td class="text-right fw-700 text-primary-color"><?= number_format($phd['qty_dispatched'], 0) ?></td>
               <td class="text-muted fs-12"><?= date('d M Y, h:i A', strtotime($phd['created_at'])) ?></td>
               <td class="text-right">
-                <form method="POST" onsubmit="return confirm('Confirm receipt of this hub delivery? This will auto-generate lot deliveries for the agents.');">
-                  <input type="hidden" name="action" value="confirm_hub">
-                  <input type="hidden" name="dispatch_id" value="<?= $phd['id'] ?>">
-                  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check-circle"></i> Confirm Receipt & Deliver</button>
-                </form>
+                <?php if ($hasMultiple): ?>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDemands(<?= $phd['id'] ?>)">
+                    <i class="fas fa-chevron-down"></i> Details
+                  </button>
+                <?php else: ?>
+                  <form method="POST" onsubmit="return confirm('Confirm receipt of this hub delivery? This will auto-generate lot deliveries for the agents.');">
+                    <input type="hidden" name="action" value="confirm_hub">
+                    <input type="hidden" name="dispatch_id" value="<?= $phd['id'] ?>">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check-circle"></i> Confirm Receipt & Deliver</button>
+                  </form>
+                <?php endif; ?>
               </td>
             </tr>
+            <?php if ($hasMultiple): ?>
+            <tr id="demands-row-<?= $phd['id'] ?>" style="display:none; background-color: var(--bg-level-1, #f8f9fa);">
+              <td colspan="6" style="padding: 12px 24px;">
+                <div style="border: 1px solid var(--border-color, #e4e7eb); border-radius: 8px; overflow: hidden; background: #fff;">
+                  <table class="tbl" style="margin: 0; width: 100%;">
+                    <thead>
+                      <tr style="background-color: var(--bg-level-2, #f1f3f5);">
+                        <th>Agent Name</th>
+                        <th>Products Details</th>
+                        <th class="text-right" style="width: 200px;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($phd['demands'] as $dem): ?>
+                      <tr>
+                        <td class="fw-600"><?= htmlspecialchars($dem['agent_name']) ?></td>
+                        <td style="cursor: pointer; text-decoration: underline; color: var(--primary-color, #1e40af);" onclick="openUpdateQtyModal(<?= $dem['id'] ?>, <?= htmlspecialchars(json_encode($dem['items'])) ?>)">
+                          <?= htmlspecialchars($dem['product_details']) ?> <i class="fas fa-edit" style="font-size: 10px; margin-left: 4px;"></i>
+                        </td>
+                        <td class="text-right">
+                          <?php if ($dem['is_confirmed'] > 0): ?>
+                            <span class="badge badge-success" style="padding: 6px 12px; font-size: 11px;"><i class="fas fa-check"></i> Confirmed</span>
+                          <?php else: ?>
+                            <form method="POST" onsubmit="return confirm('Confirm receipt of demand for <?= htmlspecialchars($dem['agent_name']) ?>?');" style="display:inline;">
+                              <input type="hidden" name="action" value="confirm_hub_demand">
+                              <input type="hidden" name="dispatch_id" value="<?= $phd['id'] ?>">
+                              <input type="hidden" name="demand_id" value="<?= $dem['id'] ?>">
+                              <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check-circle"></i> Confirm Receipt</button>
+                            </form>
+                          <?php endif; ?>
+                        </td>
+                      </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+            <?php endif; ?>
             <?php endforeach; ?>
           </tbody>
         </table>
@@ -493,6 +693,27 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
   </div>
 </div>
 
+<!-- Update Demand Qty Modal -->
+<div class="modal-overlay" id="modalUpdateDemandQty" onclick="closeModalOuter(event,'modalUpdateDemandQty')">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fas fa-edit"></i> Update Quantities (Demand #<span id="updateDemandIdTitle"></span>)</div>
+      <button class="modal-close" onclick="closeModal('modalUpdateDemandQty')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="action" value="update_demand_qty">
+      <input type="hidden" name="demand_id" id="updateDemandIdInput" value="">
+      <div class="modal-body" id="updateDemandQtyBody">
+        <!-- Dynamically populated product inputs will go here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalUpdateDemandQty')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const PRODUCTS_DATA = <?= json_encode($products, JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>;
 const CURRENCY = '<?= $currency ?>';
@@ -500,6 +721,39 @@ const CURRENCY = '<?= $currency ?>';
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 function closeModalOuter(e, id) { if (e.target.id === id) closeModal(id); }
+
+function toggleDemands(dispatchId) {
+  const row = document.getElementById('demands-row-' + dispatchId);
+  if (row) {
+    if (row.style.display === 'none') {
+      row.style.display = 'table-row';
+    } else {
+      row.style.display = 'none';
+    }
+  }
+}
+
+function openUpdateQtyModal(demandId, items) {
+  document.getElementById('updateDemandIdTitle').textContent = demandId;
+  document.getElementById('updateDemandIdInput').value = demandId;
+  
+  const container = document.getElementById('updateDemandQtyBody');
+  container.innerHTML = '';
+  
+  items.forEach(item => {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    group.style.marginBottom = '16px';
+    group.innerHTML = `
+      <label class="form-label">${item.name} (Price: ${CURRENCY}${parseFloat(item.price).toFixed(2)})</label>
+      <input type="hidden" name="product_id[]" value="${item.product_id}">
+      <input type="number" name="qty[]" class="form-control" value="${parseFloat(item.qty)}" min="0" step="0.01" required>
+    `;
+    container.appendChild(group);
+  });
+  
+  openModal('modalUpdateDemandQty');
+}
 
 function addLotRow() {
   const container = document.getElementById('lotItemsContainer');
