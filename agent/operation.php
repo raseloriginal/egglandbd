@@ -1056,5 +1056,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const en2bn = (num) => {
+    const banglaDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+    return String(num).replace(/[0-9]/g, w => banglaDigits[w]);
+  };
+  const walkDOM = (node) => {
+    if (node.nodeType === 3) {
+      if (node.nodeValue.match(/[0-9]/)) {
+        node.nodeValue = en2bn(node.nodeValue);
+      }
+    } else if (node.nodeType === 1 && !['SCRIPT', 'STYLE', 'INPUT', 'TEXTAREA'].includes(node.nodeName)) {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        walkDOM(node.childNodes[i]);
+      }
+    }
+  };
+  walkDOM(document.body);
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
 </body>
 </html>
