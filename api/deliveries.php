@@ -129,8 +129,12 @@ if ($method === 'POST' && $action === 'update_status') {
         $s2 = $pdo->prepare("SELECT order_id FROM deliveries WHERE id=?");
         $s2->execute([$delId]);
         $d2 = $s2->fetch();
-        if ($d2 && $d2['order_id'] && $status === 'completed') {
-            $pdo->prepare("UPDATE orders SET status='completed' WHERE id=?")->execute([$d2['order_id']]);
+        if ($d2 && $d2['order_id']) {
+            if (in_array($status, ['completed', 'due', 'partial'])) {
+                $pdo->prepare("UPDATE orders SET status='completed' WHERE id=?")->execute([$d2['order_id']]);
+            } elseif ($status === 'cancelled') {
+                $pdo->prepare("UPDATE orders SET status='cancelled' WHERE id=?")->execute([$d2['order_id']]);
+            }
         }
         
         $pdo->commit();
