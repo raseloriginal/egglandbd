@@ -372,7 +372,7 @@ $currency = getSetting('currency_symbol', '৳');
 
         <div class="form-group" style="margin-top: 16px;">
           <label class="form-label">Total Dispatch Qty Summary</label>
-          <input type="number" name="qty_dispatched" id="dispatchQty" class="form-control" min="0" step="0.01" readonly placeholder="0.00" style="background:#F3F4F6;">
+          <input type="number" name="qty_dispatched" id="dispatchQty" class="form-control" min="0" step="1" readonly placeholder="0.00" style="background:#F3F4F6;">
         </div>
 
       </div>
@@ -408,7 +408,7 @@ function addDispatchLotRow(lotItemId = '', qty = '') {
       </select>
     </td>
     <td>
-      <input type="number" name="items[${dispatchRowIndex}][qty_dispatched]" id="disp-qty-${dispatchRowIndex}" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0.00" oninput="sumTotalDispatchQty(); updateDemandAllocationProgress();">
+      <input type="number" name="items[${dispatchRowIndex}][qty_dispatched]" id="disp-qty-${dispatchRowIndex}" class="form-control text-right" min="0.01" step="1" value="${parseInt(qty||0)}" required placeholder="0.00" oninput="sumTotalDispatchQty(); updateDemandAllocationProgress();">
     </td>
     <td class="text-center">
       <button type="button" class="btn btn-danger btn-sm" onclick="removeDispatchLotRow(${dispatchRowIndex})"><i class="fas fa-trash-alt"></i></button>

@@ -317,7 +317,7 @@ function addLotProductRow(productId = '', qty = '', bp = '', sp = '') {
       </select>
     </td>
     <td>
-      <input type="number" name="items[${lotRowIndex}][qty]" class="form-control text-right" min="0.01" step="0.01" value="${qty}" required placeholder="0">
+      <input type="number" name="items[${lotRowIndex}][qty]" class="form-control text-right" min="0.01" step="1" value="${parseInt(qty||0)}" required placeholder="0">
     </td>
     <td>
       <div class="input-group"><span class="input-prefix">${currencySymbol}</span><input type="number" name="items[${lotRowIndex}][buying_price]" id="bp-${lotRowIndex}" class="form-control text-right" min="0" step="0.01" value="${bp}" required placeholder="0.00"></div>

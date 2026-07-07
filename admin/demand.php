@@ -288,7 +288,7 @@ function addProductRow(pid='', qty='', price='') {
       </select>
     </div>
     <div class="form-group qty-col">
-      <input type="number" class="form-control prod-qty" placeholder="Qty" min="1" step="0.01" value="${qty}" oninput="calculateTotals()" ${isViewMode?'disabled':''}>
+      <input type="number" class="form-control prod-qty" placeholder="Qty" min="1" step="1" value="${parseInt(qty||0)}" oninput="calculateTotals()" ${isViewMode?'disabled':''}>
     </div>
     <div class="form-group price-col">
       <div class="input-group">

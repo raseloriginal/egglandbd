@@ -720,7 +720,7 @@ function openOrderWarning(retailer) {
       data.items.forEach(item => {
         const d = document.createElement('div');
         d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
-        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
+        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${parseInt(item.qty||0)} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
         container.appendChild(d);
       });
     }
@@ -840,18 +840,50 @@ function openDelivery(retailer) {
   .then(data => {
     const container = document.getElementById('deliveryItemsList');
     container.innerHTML = '';
-    let total = 0;
-    if (data.items) {
-      data.items.forEach(item => {
+    window.currentDeliveryItems = data.items || [];
+    
+    const updateTotal = () => {
+      let total = 0;
+      window.currentDeliveryItems.forEach((item, index) => {
         const amt = item.qty * item.price;
         total += amt;
+        const amtEl = document.getElementById('deliv_amt_' + index);
+        if (amtEl) amtEl.textContent = CURRENCY + amt.toLocaleString('en', {minimumFractionDigits:2});
+      });
+      document.getElementById('delTotalVal').textContent = CURRENCY + total.toLocaleString('en', {minimumFractionDigits:2});
+    };
+
+    window.updateDelivItem = (index, field, val) => {
+      window.currentDeliveryItems[index][field] = parseFloat(val) || 0;
+      updateTotal();
+    };
+
+    if (data.items) {
+      data.items.forEach((item, index) => {
+        const amt = item.qty * item.price;
         const d = document.createElement('div');
-        d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
-        d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${item.qty} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${amt.toLocaleString()}</div>`;
+        d.className = 'flex flex-col gap-2 bg-white p-3 rounded-xl border border-slate-200 shadow-sm';
+        d.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="font-bold text-slate-800 text-sm">${item.product_name}</div>
+            <div class="font-black text-primary text-sm" id="deliv_amt_${index}">${CURRENCY}${amt.toLocaleString('en', {minimumFractionDigits:2})}</div>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+              <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">পরিমাণ</div>
+              <input type="number" step="1" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${parseInt(item.qty||0)}" oninput="updateDelivItem(${index}, 'qty', this.value)">
+              <div class="px-2 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-l border-slate-200">${item.unit_type}</div>
+            </div>
+            <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+              <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">দাম</div>
+              <input type="number" step="0.01" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${item.price}" oninput="updateDelivItem(${index}, 'price', this.value)">
+            </div>
+          </div>
+        `;
         container.appendChild(d);
       });
     }
-    document.getElementById('delTotalVal').textContent = CURRENCY + total.toLocaleString('en', {minimumFractionDigits:2});
+    updateTotal();
   }).catch(() => {});
 
   openSheet('sheetDelivery');
@@ -862,7 +894,12 @@ function updateDelivery(status) {
   fetch(BASE_URL + '/api/deliveries.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({action: 'update_status', delivery_id: currentDeliveryId, status})
+    body: JSON.stringify({
+      action: 'update_status', 
+      delivery_id: currentDeliveryId, 
+      status: status,
+      items: window.currentDeliveryItems
+    })
   })
   .then(r => r.json())
   .then(data => {

@@ -87,6 +87,34 @@ if ($method === 'POST' && $action === 'update_status') {
     if (!$delId || !in_array($status, $allowed)) { echo json_encode(['success'=>false,'message'=>'Invalid data']); exit; }
 
     try {
+        $pdo->beginTransaction();
+
+        if (isset($body['items']) && is_array($body['items'])) {
+            $stmt_del = $pdo->prepare("SELECT order_id FROM deliveries WHERE id = ?");
+            $stmt_del->execute([$delId]);
+            $d_info = $stmt_del->fetch();
+            $hasOrder = ($d_info && $d_info['order_id']);
+
+            $newTotal = 0;
+            foreach ($body['items'] as $item) {
+                $id = (int)$item['id'];
+                $qty = (float)$item['qty'];
+                $price = (float)$item['price'];
+                $newTotal += ($qty * $price);
+
+                if ($hasOrder) {
+                    $pdo->prepare("UPDATE order_items SET qty=?, price=? WHERE id=?")->execute([$qty, $price, $id]);
+                } else {
+                    $pdo->prepare("UPDATE delivery_items SET qty=?, price=? WHERE id=?")->execute([$qty, $price, $id]);
+                }
+            }
+
+            $pdo->prepare("UPDATE deliveries SET total_amount=? WHERE id=?")->execute([$newTotal, $delId]);
+            if ($hasOrder) {
+                $pdo->prepare("UPDATE orders SET total_amount=? WHERE id=?")->execute([$newTotal, $d_info['order_id']]);
+            }
+        }
+
         $collected = ($status === 'completed') ? null : 0; // Will be updated based on total if completed
         if ($status === 'completed') {
             $s = $pdo->prepare("SELECT total_amount FROM deliveries WHERE id=?");
@@ -96,6 +124,7 @@ if ($method === 'POST' && $action === 'update_status') {
         }
         $pdo->prepare("UPDATE deliveries SET status=?, amount_collected=? WHERE id=? AND agent_id=?")
             ->execute([$status, $collected ?? 0, $delId, $agentId]);
+        
         // Also update order status if this is from_order
         $s2 = $pdo->prepare("SELECT order_id FROM deliveries WHERE id=?");
         $s2->execute([$delId]);
@@ -103,8 +132,11 @@ if ($method === 'POST' && $action === 'update_status') {
         if ($d2 && $d2['order_id'] && $status === 'completed') {
             $pdo->prepare("UPDATE orders SET status='completed' WHERE id=?")->execute([$d2['order_id']]);
         }
+        
+        $pdo->commit();
         echo json_encode(['success'=>true,'message'=>'Updated']);
     } catch (Exception $e) {
+        $pdo->rollBack();
         echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
     }
     exit;

@@ -667,7 +667,7 @@ $filterAgent = (int)($_GET['agent_id'] ?? 0);
                   <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?> (<?= $p['unit_type'] ?>)</option>
                 <?php endforeach; ?>
               </select>
-              <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" oninput="calcLotTotal()">
+              <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="1" oninput="calcLotTotal()">
               <input type="number" name="price[]" class="form-control" placeholder="Price/unit" min="0.01" step="0.01" oninput="calcLotTotal()">
               <button type="button" class="btn-danger-xs" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
             </div>
@@ -747,7 +747,7 @@ function openUpdateQtyModal(demandId, items) {
     group.innerHTML = `
       <label class="form-label">${item.name} (Price: ${CURRENCY}${parseFloat(item.price).toFixed(2)})</label>
       <input type="hidden" name="product_id[]" value="${item.product_id}">
-      <input type="number" name="qty[]" class="form-control" value="${parseFloat(item.qty)}" min="0" step="0.01" required>
+      <input type="number" name="qty[]" class="form-control" value="${parseFloat(item.qty)}" min="0" step="1" required>
     `;
     container.appendChild(group);
   });
@@ -764,7 +764,7 @@ function addLotRow() {
       <option value="">— Product —</option>
       ${PRODUCTS_DATA.map(p => `<option value="${p.id}">${p.name} (${p.unit_type})</option>`).join('')}
     </select>
-    <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" oninput="calcLotTotal()">
+    <input type="number" name="qty[]" class="form-control" placeholder="Qty" min="0.01" step="1" oninput="calcLotTotal()">
     <input type="number" name="price[]" class="form-control" placeholder="Price" min="0.01" step="0.01" oninput="calcLotTotal()">
     <button type="button" class="btn-danger-xs" onclick="removeRow(this)"><i class="fas fa-times"></i></button>`;
   container.appendChild(row);
