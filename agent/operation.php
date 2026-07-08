@@ -140,6 +140,9 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
     <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
   </div>
+  <button id="btnFilter100m" onclick="toggle100mFilter()" class="mt-2 w-full py-1.5 bg-primary text-white rounded-lg text-[10px] font-black transition-colors flex items-center justify-center gap-1.5">
+    <i class="fas fa-crosshairs"></i> ১০০০ মিটারের মধ্যে
+  </button>
 </div>
 
 <!-- Bottom Nav -->
@@ -311,10 +314,6 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
     <form id="addRetailerForm" onsubmit="submitAddRetailer(event)" class="space-y-4">
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">রিটেইলারের নাম *</label>
-        <input type="text" id="arName" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
-      </div>
-      <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">দোকানের নাম (ঐচ্ছিক)</label>
         <input type="text" id="arShopName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
@@ -382,6 +381,10 @@ let readySaleItems= {};
 let currentDeliveryId = null;
 let currentOrderId    = null;
 let pendingRetailerId = null;
+let userMarker        = null;
+let userLatLng        = null;
+let filter100m        = true;
+let radiusCircle      = null;
 
 // ===== MAP INIT =====
 function initMap() {
@@ -413,6 +416,46 @@ function initMap() {
   L.control.layers(baseMaps).addTo(mapInstance);
 
   loadSalesMarkers();
+
+  // Track user location
+  if ("geolocation" in navigator) {
+    navigator.geolocation.watchPosition((pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      if (!userMarker) {
+        const userIcon = L.divIcon({
+          className: '',
+          html: `<div style="width: 18px; height: 18px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          zIndexOffset: 1000
+        });
+        userMarker = L.marker([lat, lng], {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
+        userMarker.on('click', () => {
+          if (userLatLng) mapInstance.flyTo(userLatLng, 17);
+        });
+      } else {
+        userMarker.setLatLng([lat, lng]);
+      }
+      userLatLng = L.latLng(lat, lng);
+      if (filter100m) {
+        if (!radiusCircle) {
+          radiusCircle = L.circle(userLatLng, { radius: 1000, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+          mapInstance.flyTo(userLatLng, 15);
+        } else {
+          radiusCircle.setLatLng(userLatLng);
+        }
+        if (currentTab === 'sales') loadSalesMarkers();
+        else loadDelivMarkers();
+      }
+    }, (err) => {
+      console.log("Location tracking error", err);
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 10000
+    });
+  }
 }
 
 function makeIcon(color, iconHtml, label) {
@@ -443,6 +486,9 @@ function loadSalesMarkers() {
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
+    if (filter100m && userLatLng) {
+      if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 1000) return;
+    }
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
     const iconHtml = hasOrder ? '<i class="fas fa-check"></i>' : '<i class="fas fa-store"></i>';
@@ -463,6 +509,9 @@ function loadDelivMarkers() {
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
+    if (filter100m && userLatLng) {
+      if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 1000) return;
+    }
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
     const iconHtml = hasDelivery ? '<i class="fas fa-truck"></i>' : '<i class="fas fa-store"></i>';
@@ -475,6 +524,39 @@ function loadDelivMarkers() {
     });
     delivMarkers.push(marker);
   });
+}
+
+function toggle100mFilter() {
+  if (!userLatLng) {
+    alert('আপনার বর্তমান লোকেশন এখনো পাওয়া যায়নি। অনুগ্রহ করে অপেক্ষা করুন।');
+    return;
+  }
+  filter100m = !filter100m;
+  const btn = document.getElementById('btnFilter100m');
+  if (filter100m) {
+    btn.classList.remove('bg-slate-100', 'text-slate-700');
+    btn.classList.add('bg-primary', 'text-white');
+    
+    // Draw a visual 1000m circle around user
+    if (!radiusCircle) {
+      radiusCircle = L.circle(userLatLng, { radius: 1000, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+    }
+    // Zoom map smoothly to user location so they can see the radius
+    mapInstance.flyTo(userLatLng, 15);
+  } else {
+    btn.classList.add('bg-slate-100', 'text-slate-700');
+    btn.classList.remove('bg-primary', 'text-white');
+    
+    if (radiusCircle) {
+      mapInstance.removeLayer(radiusCircle);
+      radiusCircle = null;
+    }
+    // Zoom out to default map center
+    mapInstance.flyTo([MAP_LAT, MAP_LNG], MAP_ZOOM);
+  }
+  
+  if (currentTab === 'sales') loadSalesMarkers();
+  else loadDelivMarkers();
 }
 
 // ===== TAB SWITCH =====
@@ -975,7 +1057,7 @@ function openLocationPicker() {
 
   if (!pickerMapInstance) {
     pickerMapInstance = L.map('pickerMap', { zoomControl: true, attributionControl: false }).setView([initialLat, initialLng], 15);
-    L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
       maxZoom: 20,
       subdomains: ['mt0','mt1','mt2','mt3']
     }).addTo(pickerMapInstance);
@@ -1012,9 +1094,9 @@ function confirmLocation() {
 function submitAddRetailer(e) {
   e.preventDefault();
   
-  const name = document.getElementById('arName').value;
   const shopName = document.getElementById('arShopName').value;
   const phone = document.getElementById('arPhone').value;
+  const name = shopName ? shopName : phone;
   const lat = document.getElementById('arLat').value;
   const lng = document.getElementById('arLng').value;
   const imageFile = document.getElementById('arImage').files[0];

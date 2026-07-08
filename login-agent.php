@@ -104,5 +104,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </a>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      function(position) { console.log("Location permission granted"); },
+      function(error) { console.log("Location permission error:", error); },
+      { enableHighAccuracy: true }
+    );
+  }
+});
+</script>
+
 </body>
 </html>
