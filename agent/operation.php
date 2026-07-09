@@ -132,6 +132,18 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Map Container -->
 <div id="leaflet-map" class="fixed top-[104px] bottom-16 left-0 w-full z-10"></div>
 
+<!-- Search Overlay on Map -->
+<div class="fixed top-[112px] left-4 right-4 z-[400]">
+  <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg flex items-center p-2 border border-slate-100">
+    <i class="fas fa-search text-slate-400 ml-2"></i>
+    <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
+    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 mr-1 transition-colors shrink-0"><i class="fas fa-times"></i></button>
+  </div>
+  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-100/50">
+    <!-- Suggestions here -->
+  </div>
+</div>
+
 <!-- Map Legend -->
 <div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
   <div id="legend-sales">
@@ -385,10 +397,11 @@ let userMarker        = null;
 let userLatLng        = null;
 let radiusCircle      = null;
 let markerClusterGroup = null;
+let forcedRetailerId   = null;
 
 // ===== MAP INIT =====
 function initMap() {
-  mapInstance = L.map('leaflet-map', { zoomControl: true, attributionControl: false }).setView([MAP_LAT, MAP_LNG], MAP_ZOOM);
+  mapInstance = L.map('leaflet-map', { zoomControl: false, attributionControl: false }).setView([MAP_LAT, MAP_LNG], MAP_ZOOM);
   
   // OpenStreetMap Base
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
@@ -495,8 +508,8 @@ function loadSalesMarkers() {
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng) return; // STRICT 100m: Don't load if no GPS yet
-    if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 100m: Don't load if no GPS yet
+    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
     
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
@@ -521,8 +534,8 @@ function loadDelivMarkers() {
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng) return; // STRICT 100m: Don't load if no GPS yet
-    if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 100m: Don't load if no GPS yet
+    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
     
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
@@ -540,6 +553,59 @@ function loadDelivMarkers() {
 }
 
 
+
+// ===== MAP SEARCH =====
+function handleMapSearch(query) {
+  const container = document.getElementById('mapSearchSuggestions');
+  const clearBtn = document.getElementById('mapSearchClearBtn');
+  if (!query.trim()) {
+    container.classList.add('hidden');
+    clearBtn.classList.add('hidden');
+    return;
+  }
+  
+  clearBtn.classList.remove('hidden');
+  const q = query.toLowerCase();
+  const matched = RETAILERS.filter(r => (r.name && r.name.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q))).slice(0, 10);
+  
+  container.innerHTML = '';
+  if (matched.length === 0) {
+    container.innerHTML = '<div class="p-3 text-xs text-center font-bold text-slate-400">কোনো রিটেইলার পাওয়া যায়নি</div>';
+  } else {
+    matched.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'p-3 border-b border-slate-100 last:border-0 hover:bg-primary/5 cursor-pointer transition-colors flex items-center gap-2';
+      div.innerHTML = `<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0"><i class="fas fa-store"></i></div><div><div class="font-bold text-sm text-slate-800">${r.name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5"><i class="fas fa-phone-alt"></i> ${r.phone || 'N/A'}</div></div>`;
+      div.onclick = () => focusRetailerOnMap(r);
+      container.appendChild(div);
+    });
+  }
+  container.classList.remove('hidden');
+}
+
+function clearMapSearch() {
+  document.getElementById('mapSearchInput').value = '';
+  document.getElementById('mapSearchSuggestions').classList.add('hidden');
+  document.getElementById('mapSearchClearBtn').classList.add('hidden');
+  forcedRetailerId = null;
+  if (currentTab === 'sales') loadSalesMarkers();
+  else loadDelivMarkers();
+}
+
+function focusRetailerOnMap(r) {
+  if (!r.lat || !r.lng) {
+    alert("এই রিটেইলারের কোনো ম্যাপ লোকেশন নেই!");
+    return;
+  }
+  
+  document.getElementById('mapSearchSuggestions').classList.add('hidden');
+  forcedRetailerId = r.id; 
+  
+  if (currentTab === 'sales') loadSalesMarkers();
+  else loadDelivMarkers();
+  
+  mapInstance.flyTo([r.lat, r.lng], 19, { animate: true, duration: 1.5 });
+}
 
 // ===== TAB SWITCH =====
 function switchTab(tab) {
