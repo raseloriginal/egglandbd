@@ -401,7 +401,7 @@ let forcedRetailerId   = null;
 
 // ===== MAP INIT =====
 function initMap() {
-  mapInstance = L.map('leaflet-map', { zoomControl: false, attributionControl: false }).setView([MAP_LAT, MAP_LNG], MAP_ZOOM);
+  mapInstance = L.map('leaflet-map', { zoomControl: false, attributionControl: false }).setView([MAP_LAT, MAP_LNG], 19);
   
   // OpenStreetMap Base
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
@@ -453,7 +453,7 @@ function initMap() {
         });
         userMarker = L.marker([lat, lng], {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
         userMarker.on('click', () => {
-          if (userLatLng) mapInstance.flyTo(userLatLng, 17);
+          if (userLatLng) mapInstance.flyTo(userLatLng, 19);
         });
       } else {
         userMarker.setLatLng([lat, lng]);
@@ -461,8 +461,8 @@ function initMap() {
       userLatLng = L.latLng(lat, lng);
       
       if (!radiusCircle) {
-        radiusCircle = L.circle(userLatLng, { radius: 100, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
-        mapInstance.flyTo(userLatLng, 15);
+        radiusCircle = L.circle(userLatLng, { radius: 100, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+        mapInstance.flyTo(userLatLng, 19);
       } else {
         radiusCircle.setLatLng(userLatLng);
       }
