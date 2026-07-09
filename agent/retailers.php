@@ -206,51 +206,6 @@ foreach ($retailers as &$r) {
             });
         });
 
-        // Geolocation filtering (100 meters)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            var R = 6371e3; // metres
-            var p1 = lat1 * Math.PI/180;
-            var p2 = lat2 * Math.PI/180;
-            var dp = (lat2-lat1) * Math.PI/180;
-            var dl = (lon2-lon1) * Math.PI/180;
-            var a = Math.sin(dp/2) * Math.sin(dp/2) +
-                    Math.cos(p1) * Math.cos(p2) *
-                    Math.sin(dl/2) * Math.sin(dl/2);
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                const userLat = pos.coords.latitude;
-                const userLng = pos.coords.longitude;
-                const cards = document.querySelectorAll('.retailer-card');
-                let visibleCount = 0;
-                cards.forEach(card => {
-                    const rLat = parseFloat(card.getAttribute('data-lat'));
-                    const rLng = parseFloat(card.getAttribute('data-lng'));
-                    if (!isNaN(rLat) && !isNaN(rLng)) {
-                        const dist = calculateDistance(userLat, userLng, rLat, rLng);
-                        if (dist > 100) {
-                            card.classList.add('hidden-by-distance');
-                            card.style.display = 'none';
-                        } else {
-                            visibleCount++;
-                        }
-                    } else {
-                        // If no coordinates, maybe hide or show? Let's hide if we enforce location
-                        card.classList.add('hidden-by-distance');
-                        card.style.display = 'none';
-                    }
-                });
-                
-                // Update counter
-                const headerP = document.querySelector('header p');
-                if(headerP) headerP.textContent = visibleCount + ' জন রিটেইলার (১০০ মিটারের মধ্যে)';
-            }, function(err) {
-                console.warn("Location not available: ", err);
-            }, { enableHighAccuracy: true });
-        }
     </script>
 <!-- ========== BOTTOM SHEETS ========== -->
 <!-- Overlay -->
