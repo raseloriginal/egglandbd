@@ -426,7 +426,7 @@ function initMap() {
     "Google Satellite": googleHybrid,
     "OpenStreetMap": osm
   };
-  L.control.layers(baseMaps).addTo(mapInstance);
+  L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(mapInstance);
 
   markerClusterGroup = L.markerClusterGroup({
     disableClusteringAtZoom: 18,
