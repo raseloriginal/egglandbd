@@ -141,8 +141,8 @@ $curr = getSetting('currency_symbol', '৳');
         </div>
       </form>
 
-      <!-- Import Retailers -->
-      <form method="POST" enctype="multipart/form-data" class="mt-24" style="margin-top: 24px;">
+      <!-- Import Retailers (Hidden) -->
+      <form method="POST" enctype="multipart/form-data" class="mt-24" style="margin-top: 24px; display: none;">
         <input type="hidden" name="upload_csv" value="1">
         <div class="card">
           <div class="card-header"><div class="card-title"><i class="fas fa-file-csv"></i> Import Retailers Data</div></div>
