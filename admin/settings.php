@@ -7,19 +7,49 @@ $pdo = getDB();
 $success = $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $settings = [
-        'map_center_lat' => trim($_POST['map_center_lat'] ?? '23.8103'),
-        'map_center_lng' => trim($_POST['map_center_lng'] ?? '90.4125'),
-        'map_zoom'       => (int)($_POST['map_zoom'] ?? 12),
-        'business_name'  => trim($_POST['business_name'] ?? 'Eggland Bangladesh'),
-        'currency_symbol'=> trim($_POST['currency_symbol'] ?? '৳'),
-    ];
-    foreach ($settings as $key => $value) {
-        $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$key, $value, $value]);
+    if (isset($_POST['upload_csv'])) {
+        if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
+            $file = $_FILES['csv_file']['tmp_name'];
+            if (($handle = fopen($file, "r")) !== FALSE) {
+                $header = fgetcsv($handle, 1000, ","); // Skip header
+                $stmt = $pdo->prepare("INSERT INTO retailers (agent_id, name, phone, lat, lng) VALUES (NULL, ?, ?, ?, ?)");
+                $count = 0;
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    $name = trim($data[0] ?? '');
+                    $phone = trim($data[1] ?? '');
+                    $lat = trim($data[2] ?? '');
+                    $lng = trim($data[3] ?? '');
+                    
+                    if (!empty($name)) {
+                        $stmt->execute([$name, $phone, $lat ?: null, $lng ?: null]);
+                        $count++;
+                    }
+                }
+                fclose($handle);
+                $success = "$count retailers imported successfully.";
+            } else {
+                $error = "Failed to open the uploaded file.";
+            }
+        } else {
+            $error = "Please upload a valid CSV file.";
+        }
+    } else {
+        $settings = [
+            'map_center_lat' => trim($_POST['map_center_lat'] ?? '23.8103'),
+            'map_center_lng' => trim($_POST['map_center_lng'] ?? '90.4125'),
+            'map_zoom'       => (int)($_POST['map_zoom'] ?? 12),
+            'business_name'  => trim($_POST['business_name'] ?? 'Eggland Bangladesh'),
+            'currency_symbol'=> trim($_POST['currency_symbol'] ?? '৳'),
+        ];
+        foreach ($settings as $key => $value) {
+            $pdo->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=?")->execute([$key, $value, $value]);
+        }
+        $success = 'Settings saved successfully.';
     }
-    $success = 'Settings saved successfully.';
 }
 
+// Fetch agents for the dropdown (removed)
+// $agentsList = ...
 // Load current settings
 $lat  = getSetting('map_center_lat', '23.8103');
 $lng  = getSetting('map_center_lng', '90.4125');
@@ -108,6 +138,26 @@ $curr = getSetting('currency_symbol', '৳');
 
         <div style="margin-top:20px;display:flex;justify-content:flex-end;">
           <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save"></i> Save Settings</button>
+        </div>
+      </form>
+
+      <!-- Import Retailers -->
+      <form method="POST" enctype="multipart/form-data" class="mt-24" style="margin-top: 24px;">
+        <input type="hidden" name="upload_csv" value="1">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fas fa-file-csv"></i> Import Retailers Data</div></div>
+          <div class="card-body">
+            <div class="alert alert-info">Upload a CSV file containing retailers data. Expected columns: <strong>Name, Phone, Lat, Lng</strong>.</div>
+            <div style="margin-top:12px;">
+              <div class="form-group">
+                <label class="form-label">CSV File</label>
+                <input type="file" name="csv_file" class="form-control" accept=".csv" required style="padding-top: 6px;">
+              </div>
+            </div>
+            <div style="margin-top:16px;">
+              <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload & Import</button>
+            </div>
+          </div>
         </div>
       </form>
     </div>

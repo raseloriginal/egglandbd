@@ -9,14 +9,26 @@ $currency = getSetting('currency_symbol', '৳');
 
 $products = $pdo->query("SELECT * FROM products WHERE status='active' ORDER BY name")->fetchAll();
 
-$stmt = $pdo->prepare("SELECT r.*,
-      (SELECT COUNT(*) FROM orders o WHERE o.retailer_id=r.id AND o.agent_id=? AND o.status='pending') as has_order,
-      (SELECT o.id FROM orders o WHERE o.retailer_id=r.id AND o.agent_id=? AND o.status='pending' ORDER BY o.created_at DESC LIMIT 1) as order_id
-    FROM retailers r
-    WHERE r.agent_id = ? AND r.status = 'active'
-    ORDER BY r.name ASC");
-$stmt->execute([$agentId, $agentId, $agentId]);
-$retailers = $stmt->fetchAll();
+$stmt = $pdo->prepare("SELECT * FROM retailers WHERE status = 'active' ORDER BY name ASC");
+$stmt->execute();
+$retailers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmtOrders = $pdo->prepare("SELECT id, retailer_id FROM orders WHERE agent_id=? AND status='pending' ORDER BY created_at DESC");
+$stmtOrders->execute([$agentId]);
+$orders = $stmtOrders->fetchAll(PDO::FETCH_ASSOC);
+
+$orderMap = [];
+foreach ($orders as $o) {
+    if (!isset($orderMap[$o['retailer_id']])) {
+        $orderMap[$o['retailer_id']] = ['count' => 0, 'latest_id' => $o['id']];
+    }
+    $orderMap[$o['retailer_id']]['count']++;
+}
+
+foreach ($retailers as &$r) {
+    $r['has_order'] = isset($orderMap[$r['id']]) ? $orderMap[$r['id']]['count'] : 0;
+    $r['order_id'] = isset($orderMap[$r['id']]) ? $orderMap[$r['id']]['latest_id'] : null;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -95,7 +107,7 @@ $retailers = $stmt->fetchAll();
         <?php else: ?>
             <div class="space-y-3">
                 <?php foreach ($retailers as $r): ?>
-                    <div class="retailer-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100/50 flex items-center gap-4" data-search="<?= strtolower(htmlspecialchars($r['name'] . ' ' . $r['phone'])) ?>">
+                    <div class="retailer-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100/50 flex items-center gap-4" data-search="<?= strtolower(htmlspecialchars($r['name'] . ' ' . $r['phone'])) ?>" data-lat="<?= htmlspecialchars($r['lat'] ?? '') ?>" data-lng="<?= htmlspecialchars($r['lng'] ?? '') ?>">
                         <div class="w-11 h-11 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-lg shrink-0">
                             <i class="fas fa-store"></i>
                         </div>
@@ -156,13 +168,59 @@ $retailers = $stmt->fetchAll();
             const cards = document.querySelectorAll('.retailer-card');
             cards.forEach(card => {
                 const text = card.getAttribute('data-search');
-                if (text.includes(term)) {
+                if (text.includes(term) && !card.classList.contains('hidden-by-distance')) {
                     card.style.display = 'flex';
                 } else {
                     card.style.display = 'none';
                 }
             });
         });
+
+        // Geolocation filtering (100 meters)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            var R = 6371e3; // metres
+            var p1 = lat1 * Math.PI/180;
+            var p2 = lat2 * Math.PI/180;
+            var dp = (lat2-lat1) * Math.PI/180;
+            var dl = (lon2-lon1) * Math.PI/180;
+            var a = Math.sin(dp/2) * Math.sin(dp/2) +
+                    Math.cos(p1) * Math.cos(p2) *
+                    Math.sin(dl/2) * Math.sin(dl/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                const userLat = pos.coords.latitude;
+                const userLng = pos.coords.longitude;
+                const cards = document.querySelectorAll('.retailer-card');
+                let visibleCount = 0;
+                cards.forEach(card => {
+                    const rLat = parseFloat(card.getAttribute('data-lat'));
+                    const rLng = parseFloat(card.getAttribute('data-lng'));
+                    if (!isNaN(rLat) && !isNaN(rLng)) {
+                        const dist = calculateDistance(userLat, userLng, rLat, rLng);
+                        if (dist > 100) {
+                            card.classList.add('hidden-by-distance');
+                            card.style.display = 'none';
+                        } else {
+                            visibleCount++;
+                        }
+                    } else {
+                        // If no coordinates, maybe hide or show? Let's hide if we enforce location
+                        card.classList.add('hidden-by-distance');
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Update counter
+                const headerP = document.querySelector('header p');
+                if(headerP) headerP.textContent = visibleCount + ' জন রিটেইলার (১০০ মিটারের মধ্যে)';
+            }, function(err) {
+                console.warn("Location not available: ", err);
+            }, { enableHighAccuracy: true });
+        }
     </script>
 <!-- ========== BOTTOM SHEETS ========== -->
 <!-- Overlay -->

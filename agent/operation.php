@@ -25,9 +25,9 @@ if ($agentId) {
           (SELECT COUNT(*) FROM deliveries d WHERE d.retailer_id=r.id AND d.agent_id=? AND d.status='pending') as has_delivery,
           (SELECT d.id FROM deliveries d WHERE d.retailer_id=r.id AND d.agent_id=? AND d.status='pending' ORDER BY d.created_at DESC LIMIT 1) as delivery_id
         FROM retailers r
-        WHERE r.agent_id=? AND r.status='active' AND r.lat IS NOT NULL AND r.lng IS NOT NULL
+        WHERE r.status='active' AND r.lat IS NOT NULL AND r.lng IS NOT NULL
     ");
-    $stmt->execute([$agentId, $agentId, $agentId, $agentId, $agentId]);
+    $stmt->execute([$agentId, $agentId, $agentId, $agentId]);
     $retailers = $stmt->fetchAll();
 }
 
@@ -69,6 +69,8 @@ $currency = getSetting('currency_symbol', '৳');
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <style>
 /* CSS transition helpers for sheets and custom Leaflet styles */
 .bottom-sheet {
@@ -140,9 +142,6 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
     <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
   </div>
-  <button id="btnFilter100m" onclick="toggle100mFilter()" class="mt-2 w-full py-1.5 bg-primary text-white rounded-lg text-[10px] font-black transition-colors flex items-center justify-center gap-1.5">
-    <i class="fas fa-crosshairs"></i> ১০০০ মিটারের মধ্যে
-  </button>
 </div>
 
 <!-- Bottom Nav -->
@@ -358,6 +357,7 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Leaflet JS -->
 <script src="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
 // ===== DATA FROM PHP =====
@@ -383,8 +383,8 @@ let currentOrderId    = null;
 let pendingRetailerId = null;
 let userMarker        = null;
 let userLatLng        = null;
-let filter100m        = true;
 let radiusCircle      = null;
+let markerClusterGroup = null;
 
 // ===== MAP INIT =====
 function initMap() {
@@ -415,6 +415,14 @@ function initMap() {
   };
   L.control.layers(baseMaps).addTo(mapInstance);
 
+  markerClusterGroup = L.markerClusterGroup({
+    disableClusteringAtZoom: 18,
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false
+  });
+  mapInstance.addLayer(markerClusterGroup);
+
   loadSalesMarkers();
 
   // Track user location
@@ -438,16 +446,15 @@ function initMap() {
         userMarker.setLatLng([lat, lng]);
       }
       userLatLng = L.latLng(lat, lng);
-      if (filter100m) {
-        if (!radiusCircle) {
-          radiusCircle = L.circle(userLatLng, { radius: 1000, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
-          mapInstance.flyTo(userLatLng, 15);
-        } else {
-          radiusCircle.setLatLng(userLatLng);
-        }
-        if (currentTab === 'sales') loadSalesMarkers();
-        else loadDelivMarkers();
+      
+      if (!radiusCircle) {
+        radiusCircle = L.circle(userLatLng, { radius: 100, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+        mapInstance.flyTo(userLatLng, 15);
+      } else {
+        radiusCircle.setLatLng(userLatLng);
       }
+      if (currentTab === 'sales') loadSalesMarkers();
+      else loadDelivMarkers();
     }, (err) => {
       console.log("Location tracking error", err);
     }, {
@@ -482,82 +489,57 @@ function makeIcon(color, iconHtml, label) {
 
 // ===== SALES MARKERS =====
 function loadSalesMarkers() {
-  salesMarkers.forEach(m => mapInstance.removeLayer(m));
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+  }
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (filter100m && userLatLng) {
-      if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 1000) return;
-    }
+    if (!userLatLng) return; // STRICT 100m: Don't load if no GPS yet
+    if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
     const iconHtml = hasOrder ? '<i class="fas fa-check"></i>' : '<i class="fas fa-store"></i>';
     const label = r.shop_name ? r.shop_name : r.name;
     const icon = makeIcon(color, iconHtml, label);
-    const marker = L.marker([r.lat, r.lng], {icon}).addTo(mapInstance);
+    const marker = L.marker([r.lat, r.lng], {icon});
     marker.on('click', () => {
       if (hasOrder) openOrderWarning(r);
       else openNewOrder(r);
     });
+    markerClusterGroup.addLayer(marker);
     salesMarkers.push(marker);
   });
 }
 
 // ===== DELIVERY MARKERS =====
 function loadDelivMarkers() {
-  delivMarkers.forEach(m => mapInstance.removeLayer(m));
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+  }
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (filter100m && userLatLng) {
-      if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 1000) return;
-    }
+    if (!userLatLng) return; // STRICT 100m: Don't load if no GPS yet
+    if (userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
     const iconHtml = hasDelivery ? '<i class="fas fa-truck"></i>' : '<i class="fas fa-store"></i>';
     const label = r.shop_name ? r.shop_name : r.name;
     const icon = makeIcon(color, iconHtml, label);
-    const marker = L.marker([r.lat, r.lng], {icon}).addTo(mapInstance);
+    const marker = L.marker([r.lat, r.lng], {icon});
     marker.on('click', () => {
       if (hasDelivery) openDelivery(r);
       else openReadySale(r);
     });
+    markerClusterGroup.addLayer(marker);
     delivMarkers.push(marker);
   });
 }
 
-function toggle100mFilter() {
-  if (!userLatLng) {
-    alert('আপনার বর্তমান লোকেশন এখনো পাওয়া যায়নি। অনুগ্রহ করে অপেক্ষা করুন।');
-    return;
-  }
-  filter100m = !filter100m;
-  const btn = document.getElementById('btnFilter100m');
-  if (filter100m) {
-    btn.classList.remove('bg-slate-100', 'text-slate-700');
-    btn.classList.add('bg-primary', 'text-white');
-    
-    // Draw a visual 1000m circle around user
-    if (!radiusCircle) {
-      radiusCircle = L.circle(userLatLng, { radius: 1000, color: '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
-    }
-    // Zoom map smoothly to user location so they can see the radius
-    mapInstance.flyTo(userLatLng, 15);
-  } else {
-    btn.classList.add('bg-slate-100', 'text-slate-700');
-    btn.classList.remove('bg-primary', 'text-white');
-    
-    if (radiusCircle) {
-      mapInstance.removeLayer(radiusCircle);
-      radiusCircle = null;
-    }
-    // Zoom out to default map center
-    mapInstance.flyTo([MAP_LAT, MAP_LNG], MAP_ZOOM);
-  }
-  
-  if (currentTab === 'sales') loadSalesMarkers();
-  else loadDelivMarkers();
-}
+
 
 // ===== TAB SWITCH =====
 function switchTab(tab) {
@@ -610,11 +592,9 @@ function executeTabSwitch(tab) {
   }
 
   if (tab === 'sales') {
-    delivMarkers.forEach(m => mapInstance.removeLayer(m));
     delivMarkers = [];
     loadSalesMarkers();
   } else {
-    salesMarkers.forEach(m => mapInstance.removeLayer(m));
     salesMarkers = [];
     loadDelivMarkers();
   }

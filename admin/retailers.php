@@ -12,8 +12,8 @@ $mapZoom = getSetting('map_zoom', '12');
 $retailers = $pdo->query("
     SELECT r.*, u.full_name as agent_name, a.area as agent_area
     FROM retailers r
-    JOIN agents a ON a.id=r.agent_id
-    JOIN users u ON u.id=a.user_id
+    LEFT JOIN agents a ON a.id=r.agent_id
+    LEFT JOIN users u ON u.id=a.user_id
     WHERE r.lat IS NOT NULL AND r.lng IS NOT NULL
 ")->fetchAll();
 
@@ -51,6 +51,8 @@ $currency = getSetting('currency_symbol', '৳');
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/global.css">
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <style>
 .map-container { height: calc(100vh - var(--header-h) - 150px); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
 #retailerMap { width: 100%; height: 100%; }
@@ -142,6 +144,7 @@ $currency = getSetting('currency_symbol', '৳');
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script>
 const retailers = <?= json_encode($retailers, JSON_UNESCAPED_UNICODE) ?>;
 const agents = <?= json_encode($agents, JSON_UNESCAPED_UNICODE) ?>;
@@ -180,9 +183,13 @@ function changeMapLayer(layerKey) {
 }
 
 let activeMarkers = [];
+let markerClusterGroup = null;
 
 function clearMarkers() {
-  activeMarkers.forEach(m => map.removeLayer(m));
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+    map.removeLayer(markerClusterGroup);
+  }
   activeMarkers = [];
 }
 
@@ -220,6 +227,13 @@ function switchMapTab(tabName) {
 
   clearMarkers();
   
+  markerClusterGroup = L.markerClusterGroup({
+    disableClusteringAtZoom: 17,
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false
+  });
+
   let points = [];
   
   if (tabName === 'retailers') {
@@ -231,11 +245,11 @@ function switchMapTab(tabName) {
             <div style="font-size:12px;color:#5C4A40;"><i class="fas fa-map-marker-alt"></i> ${r.address||'No address'}</div>
             <div style="font-size:12px;color:#5C4A40;"><i class="fas fa-phone"></i> ${r.phone||'No phone'}</div>
             <div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8DDD6;font-size:11px;color:#9B8B82;">
-              Agent: <strong>${r.agent_name}</strong> | ${r.agent_area||'—'}
+              Agent: <strong>${r.agent_name || 'System / Unassigned'}</strong> | ${r.agent_area||'—'}
             </div>
             <span style="display:inline-block;margin-top:6px;background:${r.status==='active'?'#DCFCE7':'#FEE2E2'};color:${r.status==='active'?'#16A34A':'#DC2626'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">${r.status}</span>
           </div>`);
-        marker.addTo(map);
+        markerClusterGroup.addLayer(marker);
         activeMarkers.push(marker);
         points.push([r.lat, r.lng]);
       }
@@ -254,7 +268,7 @@ function switchMapTab(tabName) {
             </div>
             <span style="display:inline-block;margin-top:6px;background:${a.status==='active'?'#DCFCE7':'#FEE2E2'};color:${a.status==='active'?'#16A34A':'#DC2626'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">${a.status}</span>
           </div>`);
-        marker.addTo(map);
+        markerClusterGroup.addLayer(marker);
         activeMarkers.push(marker);
         points.push([a.lat, a.lng]);
       }
@@ -285,12 +299,14 @@ function switchMapTab(tabName) {
               o.status==='processing'?'#0369A1':'#DC2626'
             };font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">${o.status.toUpperCase()}</span>
           </div>`);
-        marker.addTo(map);
+        markerClusterGroup.addLayer(marker);
         activeMarkers.push(marker);
         points.push([o.lat, o.lng]);
       }
     });
   }
+
+  map.addLayer(markerClusterGroup);
 
   if (points.length > 0) {
     map.fitBounds(points, {padding: [40, 40]});

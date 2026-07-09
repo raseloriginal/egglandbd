@@ -10,17 +10,47 @@ try {
     $agentId = $_SESSION['agent_id'] ?? 0;
     $pdo = getDB();
 
-    $stmt = $pdo->prepare("
-        SELECT r.*,
-          (SELECT COUNT(*) FROM orders o WHERE o.retailer_id=r.id AND o.agent_id=? AND o.status='pending') as has_order,
-          (SELECT o.id FROM orders o WHERE o.retailer_id=r.id AND o.agent_id=? AND o.status='pending' ORDER BY o.created_at DESC LIMIT 1) as order_id,
-          (SELECT COUNT(*) FROM deliveries d WHERE d.retailer_id=r.id AND d.agent_id=? AND d.status='pending') as has_delivery,
-          (SELECT d.id FROM deliveries d WHERE d.retailer_id=r.id AND d.agent_id=? AND d.status='pending' ORDER BY d.created_at DESC LIMIT 1) as delivery_id
-        FROM retailers r
-        WHERE r.agent_id=? AND r.status='active' AND r.lat IS NOT NULL AND r.lng IS NOT NULL
-    ");
-    $stmt->execute([$agentId, $agentId, $agentId, $agentId, $agentId]);
-    $retailers = $stmt->fetchAll();
+    // Fetch all active retailers
+    $stmt = $pdo->prepare("SELECT * FROM retailers WHERE status='active' AND lat IS NOT NULL AND lng IS NOT NULL");
+    $stmt->execute();
+    $retailers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch agent's pending orders
+    $stmtOrders = $pdo->prepare("SELECT id, retailer_id FROM orders WHERE agent_id=? AND status='pending' ORDER BY created_at DESC");
+    $stmtOrders->execute([$agentId]);
+    $orders = $stmtOrders->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch agent's pending deliveries
+    $stmtDeliveries = $pdo->prepare("SELECT id, retailer_id FROM deliveries WHERE agent_id=? AND status='pending' ORDER BY created_at DESC");
+    $stmtDeliveries->execute([$agentId]);
+    $deliveries = $stmtDeliveries->fetchAll(PDO::FETCH_ASSOC);
+
+    // Map orders to retailers
+    $orderMap = [];
+    foreach ($orders as $o) {
+        if (!isset($orderMap[$o['retailer_id']])) {
+            $orderMap[$o['retailer_id']] = ['count' => 0, 'latest_id' => $o['id']];
+        }
+        $orderMap[$o['retailer_id']]['count']++;
+    }
+
+    // Map deliveries to retailers
+    $deliveryMap = [];
+    foreach ($deliveries as $d) {
+        if (!isset($deliveryMap[$d['retailer_id']])) {
+            $deliveryMap[$d['retailer_id']] = ['count' => 0, 'latest_id' => $d['id']];
+        }
+        $deliveryMap[$d['retailer_id']]['count']++;
+    }
+
+    // Attach data to retailers
+    foreach ($retailers as &$r) {
+        $r['has_order'] = isset($orderMap[$r['id']]) ? $orderMap[$r['id']]['count'] : 0;
+        $r['order_id'] = isset($orderMap[$r['id']]) ? $orderMap[$r['id']]['latest_id'] : null;
+        
+        $r['has_delivery'] = isset($deliveryMap[$r['id']]) ? $deliveryMap[$r['id']]['count'] : 0;
+        $r['delivery_id'] = isset($deliveryMap[$r['id']]) ? $deliveryMap[$r['id']]['latest_id'] : null;
+    }
 
     echo json_encode(['success' => true, 'retailers' => $retailers], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {

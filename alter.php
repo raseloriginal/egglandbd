@@ -1,0 +1,1 @@
+<?php $_SERVER["REMOTE_ADDR"] = "127.0.0.1"; $_SERVER["HTTP_HOST"] = "localhost"; require "config/db.php"; $pdo = getDB(); try { $pdo->exec("ALTER TABLE retailers MODIFY agent_id INT NULL"); echo "Success"; } catch (Exception $e) { echo "Error: " . $e->getMessage(); } ?>
