@@ -33,6 +33,9 @@ $firstLetter = strtoupper(substr($u['full_name'] ?? 'A', 0, 1));
       <a href="<?= BASE_URL ?>/admin/agents.php" class="nav-item <?= $currentPage === 'agents' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-users"></i></span> Agents
       </a>
+      <a href="<?= BASE_URL ?>/admin/retailers_list.php" class="nav-item <?= $currentPage === 'retailers_list' ? 'active' : '' ?>">
+        <span class="nav-icon"><i class="fas fa-store"></i></span> Retailers List
+      </a>
       <a href="<?= BASE_URL ?>/admin/retailers.php" class="nav-item <?= $currentPage === 'retailers' ? 'active' : '' ?>">
         <span class="nav-icon"><i class="fas fa-map-marked-alt"></i></span> Retailers Map
       </a>
