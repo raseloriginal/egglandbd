@@ -137,6 +137,9 @@ foreach ($retailers as &$r) {
                             <button onclick="handleOrderClick(<?= $r['id'] ?>)" class="px-3 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold hover:bg-primary hover:text-white transition-colors">
                                 <i class="fas fa-shopping-cart mr-1"></i> অর্ডার
                             </button>
+                            <button onclick='openEditRetailer(<?= json_encode($r, JSON_HEX_APOS) ?>)' class="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm hover:bg-blue-100 transition-colors">
+                                <i class="fas fa-edit"></i>
+                            </button>
                             <?php if (!empty($r['phone'])): ?>
                             <a href="tel:<?= htmlspecialchars($r['phone']) ?>" class="w-9 h-9 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-sm hover:bg-green-100 transition-colors">
                                 <i class="fas fa-phone"></i>
@@ -269,6 +272,37 @@ foreach ($retailers as &$r) {
   </div>
 </div>
 
+<!-- Sheet 3: Edit Retailer -->
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetEditRetailer">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div>
+      <h3 class="text-base font-extrabold text-slate-900">রিটেইলার তথ্য পরিবর্তন</h3>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <form id="editRetailerForm" onsubmit="submitEditRetailer(event)" class="space-y-4">
+      <input type="hidden" id="erId">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">দোকানের নাম *</label>
+        <input type="text" id="erName" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">ফোন নাম্বার</label>
+        <input type="tel" id="erPhone" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">ঠিকানা</label>
+        <input type="text" id="erAddress" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
+      </div>
+      <button type="submit" id="btnSubmitEditRetailer" class="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white rounded-xl text-base font-bold shadow-lg shadow-blue-500/25 transition-all mt-4">
+        আপডেট করুন
+      </button>
+    </form>
+  </div>
+</div>
+
 
 <script>
 
@@ -298,7 +332,7 @@ function openSheet(id) {
 }
 
 function closeAllSheets(removeOverlay = true) {
-  ['sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery','sheetAddRetailer'].forEach(s => {
+  ['sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery','sheetAddRetailer','sheetEditRetailer'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.classList.remove('open');
   });
@@ -487,6 +521,49 @@ function proceedNewOrder() {
   closeAllSheets();
   setTimeout(() => openNewOrder(currentRetailer), 350);
 }
+
+// ===== EDIT RETAILER =====
+function openEditRetailer(r) {
+    document.getElementById('erId').value = r.id;
+    document.getElementById('erName').value = r.name;
+    document.getElementById('erPhone').value = r.phone || '';
+    document.getElementById('erAddress').value = r.address || '';
+    openSheet('sheetEditRetailer');
+}
+
+function submitEditRetailer(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitEditRetailer');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> আপডেট হচ্ছে...';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('id', document.getElementById('erId').value);
+    fd.append('name', document.getElementById('erName').value);
+    fd.append('phone', document.getElementById('erPhone').value);
+    fd.append('address', document.getElementById('erAddress').value);
+
+    fetch(BASE_URL + '/api/agent_edit_retailer.php', {
+        method: 'POST',
+        body: fd
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            closeAllSheets();
+            showToast('সফলভাবে আপডেট হয়েছে!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            alert('ত্রুটি: ' + (data.message || 'আপডেট করতে ব্যর্থ হয়েছে'));
+        }
+    })
+    .catch(() => alert('নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।'))
+    .finally(() => {
+        btn.innerHTML = 'আপডেট করুন';
+        btn.disabled = false;
+    });
+}
+
 
 
 </script>
