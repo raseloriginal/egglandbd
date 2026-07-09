@@ -9,7 +9,18 @@ $currency = getSetting('currency_symbol', '৳');
 
 $products = $pdo->query("SELECT * FROM products WHERE status='active' ORDER BY name")->fetchAll();
 
-$stmt = $pdo->prepare("SELECT * FROM retailers WHERE status = 'active' ORDER BY name ASC");
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$limit = 100;
+$offset = ($page - 1) * $limit;
+
+$countStmt = $pdo->query("SELECT COUNT(*) FROM retailers WHERE status='active'");
+$totalRetailers = $countStmt->fetchColumn();
+$totalPages = ceil($totalRetailers / $limit);
+
+$stmt = $pdo->prepare("SELECT * FROM retailers WHERE status = 'active' ORDER BY name ASC LIMIT :limit OFFSET :offset");
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $retailers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -78,7 +89,7 @@ foreach ($retailers as &$r) {
             <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
             <div class="flex-1">
                 <h1 class="text-sm font-bold leading-tight">রিটেইলার</h1>
-                <p class="text-[10px] text-white/60 font-semibold"><?= count($retailers) ?> জন রিটেইলার</p>
+                <p class="text-[10px] text-white/60 font-semibold"><?= $totalRetailers ?> জন রিটেইলার</p>
             </div>
             <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="history.back()">
                 <i class="fas fa-arrow-left text-sm"></i>
@@ -135,6 +146,25 @@ foreach ($retailers as &$r) {
                     </div>
                 <?php endforeach; ?>
             </div>
+            
+            <?php if ($totalPages > 1): ?>
+            <div class="flex justify-between items-center mt-6 mb-4">
+                <?php if ($page > 1): ?>
+                    <a href="?page=<?= $page - 1 ?>" class="px-4 py-2 bg-white rounded-xl shadow-sm text-primary font-bold text-sm border border-slate-200">পূর্ববর্তী (Prev)</a>
+                <?php else: ?>
+                    <div></div>
+                <?php endif; ?>
+                
+                <span class="text-xs font-bold text-slate-500">পাতা <?= $page ?> / <?= $totalPages ?></span>
+                
+                <?php if ($page < $totalPages): ?>
+                    <a href="?page=<?= $page + 1 ?>" class="px-4 py-2 bg-white rounded-xl shadow-sm text-primary font-bold text-sm border border-slate-200">পরবর্তী (Next)</a>
+                <?php else: ?>
+                    <div></div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            
         <?php endif; ?>
     </main>
 
