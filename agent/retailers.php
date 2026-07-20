@@ -400,10 +400,6 @@ function changeQty(productId, delta) {
   let price = parseFloat(priceInput.value || '0');
   const prod = PRODUCTS.find(p => p.id == productId);
   const bp = parseFloat(prod.buying_price || 0);
-  if (price < bp) {
-    price = bp;
-    priceInput.value = bp;
-  }
   
   let val = parseInt(qtyInput.value || '0') + delta;
   if (val < 0) val = 0;
@@ -422,11 +418,6 @@ function updatePrice(productId) {
   
   const prod = PRODUCTS.find(p => p.id == productId);
   const bp = parseFloat(prod.buying_price || 0);
-  if (price < bp) {
-    alert('বিক্রয় মূল্য কেনার মূল্য (' + bp + ') এর নিচে হতে পারে না।');
-    price = bp;
-    priceInput.value = bp;
-  }
   
   if (qty > 0) {
     orderItems[productId] = {qty: qty, price: price};
@@ -442,10 +433,6 @@ function updateTotal(productId) {
   
   const prod = PRODUCTS.find(p => p.id == productId);
   const bp = parseFloat(prod.buying_price || 0);
-  if (price < bp) {
-    price = bp;
-    priceInput.value = bp;
-  }
   
   if (qty > 0) orderItems[productId] = {qty: qty, price: price};
   else delete orderItems[productId];
@@ -462,7 +449,7 @@ function placeOrder() {
   const items = Object.entries(orderItems).map(([pid, item]) => {
     const prod = PRODUCTS.find(p => p.id == pid);
     const bp = parseFloat(prod.buying_price || 0);
-    const finalPrice = item.price < bp ? bp : item.price;
+    const finalPrice = item.price;
     return {product_id: pid, qty: item.qty, price: finalPrice};
   });
   if (items.length === 0) { alert('অনুগ্রহ করে অন্তত একটি পণ্য সিলেক্ট করুন।'); return; }
