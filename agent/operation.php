@@ -73,10 +73,12 @@ $currency = getSetting('currency_symbol', '৳');
 /* CSS transition helpers for sheets and custom Leaflet styles */
 .bottom-sheet {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+} 
 .bottom-sheet.open {
-  transform: translateY(0);
+  transform: translateY(0); 
 }
+
+/*efsh*/
 .bottom-sheet-overlay {
   transition: opacity 0.3s ease;
 }
@@ -153,12 +155,21 @@ $currency = getSetting('currency_symbol', '৳');
 <!-- Map Container -->
 <div id="leaflet-map" class="fixed top-[112px] bottom-16 left-0 w-full z-10"></div>
 
+<<<<<<< HEAD
 <!-- Search Overlay on Map (hidden by default, toggle with header icon) -->
 <div id="searchContainer" class="fixed top-[118px] left-3 right-3 z-[400] hidden">
   <div class="relative bg-white rounded-2xl shadow-lg flex items-center p-2 border border-slate-200">
     <i class="fas fa-search text-slate-400 ml-2"></i>
     <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
     <button id="mapSearchClearBtn" onclick="closeSearch()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 active:scale-90 transition-transform"><i class="fas fa-times"></i></button>
+=======
+<!-- Search Overlay on Map -->
+<div class="fixed top-[112px] left-4 right-4 z-[400]">
+  <div class="relative bg-white rounded-2xl shadow-lg flex items-center p-2 border border-slate-200">
+    <i class="fas fa-search text-slate-400 ml-2"></i>
+    <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
+    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i class="fas fa-times"></i></button>
+>>>>>>> 7b77ee8cdc22579170a5c6f678849384e5b61526
   </div>
   <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-200">
     <!-- Suggestions here -->
