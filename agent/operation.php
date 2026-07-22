@@ -95,6 +95,26 @@ $currency = getSetting('currency_symbol', '৳');
   font-size: 11px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
+@media (min-width: 480px) {
+  html {
+    background-color: #0f172a;
+  }
+  body {
+    max-width: 480px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    position: relative !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3) !important;
+    min-height: 100vh !important;
+  }
+  .fixed {
+    max-width: 480px !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
 </style>
 </head>
 <body class="bg-brandbg h-full w-full overflow-hidden select-none font-sans antialiased text-slate-800">
@@ -120,11 +140,11 @@ $currency = getSetting('currency_symbol', '৳');
 </header>
 
 <!-- Tab Bar -->
-<div class="flex bg-white border-b border-slate-100 fixed top-14 left-0 right-0 h-12 z-[250] shadow-sm">
-  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary">
+<div class="flex bg-white border-b-2 border-slate-200 fixed top-14 left-0 right-0 h-12 z-[250] shadow-md">
+  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-black text-primary transition-all border-b-2 border-primary">
     <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> বিক্রি
   </button>
-  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent">
+  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-extrabold text-slate-700 hover:text-primary transition-all border-b-2 border-transparent">
     <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> ডেলিভারি
   </button>
 </div>
@@ -157,28 +177,7 @@ $currency = getSetting('currency_symbol', '৳');
 </div>
 
 <!-- Bottom Nav -->
-<nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-[250] flex items-center justify-around px-2 shadow-lg">
-  <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-home"></i></span>
-    <span>হোম</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-    <span>ম্যাপ</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-    <span>রিটেইলার</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-book"></i></span>
-    <span>লেনদেন</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-    <span>বিক্রি</span>
-  </a>
-</nav>
+<?php $activePage = 'operation'; include dirname(__DIR__) . '/includes/agent-nav.php'; ?>
 
 <!-- ========== BOTTOM SHEETS ========== -->
 <!-- Overlay -->
@@ -400,21 +399,38 @@ let markerClusterGroup = null;
 let forcedRetailerId   = null;
 
 // ===== MAP INIT =====
+let lastRenderLatLng = null;
+
 function initMap() {
-  mapInstance = L.map('leaflet-map', { zoomControl: false, attributionControl: false }).setView([MAP_LAT, MAP_LNG], 19);
+  mapInstance = L.map('leaflet-map', { 
+    preferCanvas: true,
+    zoomControl: false, 
+    attributionControl: false,
+    fadeAnimation: false,
+    zoomAnimation: true,
+    markerZoomAnimation: false
+  }).setView([MAP_LAT, MAP_LNG], 19);
   
   // OpenStreetMap Base
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    maxZoom: 19,
+    updateWhenZooming: false,
+    updateWhenIdle: true
+  });
   
   // Google Maps Road Base (uses Google's tile server directly via Leaflet without requiring API keys)
   const googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    updateWhenZooming: false,
+    updateWhenIdle: true
   });
 
   const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
     maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    updateWhenZooming: false,
+    updateWhenIdle: true
   });
 
   // Load Google Streets as default, OSM as secondary fallback
@@ -431,18 +447,23 @@ function initMap() {
   markerClusterGroup = L.markerClusterGroup({
     disableClusteringAtZoom: 18,
     maxClusterRadius: 50,
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    animate: false,
+    animateAddingMarkers: false,
+    chunkedLoading: true
   });
   mapInstance.addLayer(markerClusterGroup);
 
   loadSalesMarkers();
 
-  // Track user location
+  // Track user location with smart throttling for low-end mobile devices
   if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition((pos) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
+      const newLatLng = L.latLng(lat, lng);
+
       if (!userMarker) {
         const userIcon = L.divIcon({
           className: '',
@@ -458,21 +479,27 @@ function initMap() {
       } else {
         userMarker.setLatLng([lat, lng]);
       }
-      userLatLng = L.latLng(lat, lng);
+      
+      userLatLng = newLatLng;
       
       if (!radiusCircle) {
-        radiusCircle = L.circle(userLatLng, { radius: 100, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
         mapInstance.flyTo(userLatLng, 19);
       } else {
         radiusCircle.setLatLng(userLatLng);
       }
-      if (currentTab === 'sales') loadSalesMarkers();
-      else loadDelivMarkers();
+
+      // Re-render markers only if agent moved significantly (> 3 meters) or first time
+      if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 3) {
+        lastRenderLatLng = userLatLng;
+        if (currentTab === 'sales') loadSalesMarkers();
+        else loadDelivMarkers();
+      }
     }, (err) => {
       console.log("Location tracking error", err);
     }, {
       enableHighAccuracy: true,
-      maximumAge: 10000,
+      maximumAge: 5000,
       timeout: 10000
     });
   }
@@ -508,8 +535,8 @@ function loadSalesMarkers() {
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 100m: Don't load if no GPS yet
-    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
+    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
@@ -534,8 +561,8 @@ function loadDelivMarkers() {
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 100m: Don't load if no GPS yet
-    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 100) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
+    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';

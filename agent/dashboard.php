@@ -106,14 +106,14 @@ if (!empty($slider_products)) {
         
         $change_str = "";
         if ($percent > 0) {
-            $change_str = '<span class="text-red-500 font-black">▲ ' . number_format($percent, 1) . '%</span>';
+            $change_str = '<span class="bg-red-500/20 text-red-400 font-extrabold border border-red-500/30 px-1.5 py-0.5 rounded text-[10px]">▲ ' . number_format($percent, 1) . '%</span>';
         } elseif ($percent < 0) {
-            $change_str = '<span class="text-green-600 font-black">▼ ' . number_format(abs($percent), 1) . '%</span>';
+            $change_str = '<span class="bg-emerald-500/20 text-emerald-400 font-extrabold border border-emerald-500/30 px-1.5 py-0.5 rounded text-[10px]">▼ ' . number_format(abs($percent), 1) . '%</span>';
         } else {
-            $change_str = '<span class="text-slate-400 font-medium">0%</span>';
+            $change_str = '<span class="bg-slate-700/50 text-slate-300 font-bold border border-slate-600/30 px-1.5 py-0.5 rounded text-[10px]">0%</span>';
         }
         
-        $ticker_items[] = '🥚 <span class="text-slate-700 font-bold">' . htmlspecialchars($p['name']) . '</span>: <span class="text-slate-900 font-extrabold">' . $currency . number_format($buying_price, 2) . '</span> (' . $change_str . ')';
+        $ticker_items[] = '🥚 <span class="text-slate-200 font-bold">' . htmlspecialchars($p['name']) . '</span>: <span class="text-amber-400 font-black text-sm">' . $currency . number_format($buying_price, 2) . '</span> ' . $change_str;
     }
     $ticker_text = implode('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', $ticker_items);
     $marquee_content = $ticker_text . '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' . $ticker_text;
@@ -177,6 +177,26 @@ if (!empty($slider_products)) {
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
+@media (min-width: 480px) {
+  html {
+    background-color: #0f172a;
+  }
+  body {
+    max-width: 480px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    position: relative !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3) !important;
+    min-height: 100vh !important;
+  }
+  .fixed {
+    max-width: 480px !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
 </style>
 </head>
 <body class="bg-brandbg min-h-full flex flex-col font-sans antialiased text-slate-800 pb-20">
@@ -201,10 +221,14 @@ if (!empty($slider_products)) {
 
 <!-- Notice Ticker / Auto Slider -->
 <?php if (!empty($marquee_content)): ?>
-<div onclick="openRateModal()" class="bg-amber-50 border-b border-amber-100 py-1.5 px-4 overflow-hidden shadow-sm flex items-center cursor-pointer hover:bg-amber-100 transition-colors">
-  <div class="max-w-2xl mx-auto flex items-center gap-3 w-full">
-    <span class="bg-gold text-primary text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 animate-pulse shadow-sm z-10">
-      <i class="fas fa-bullhorn"></i> রেট আপডেট
+<div onclick="openRateModal()" class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800/80 py-2 px-3 overflow-hidden shadow-md flex items-center cursor-pointer hover:bg-slate-900 transition-all text-slate-100">
+  <div class="max-w-2xl mx-auto flex items-center gap-2.5 w-full">
+    <span class="bg-red-600/90 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-lg shrink-0 flex items-center gap-1.5 shadow-sm shadow-red-500/20 border border-red-500/30 z-10">
+      <span class="relative flex h-2 w-2">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+      </span>
+      <span>লাইভ প্রাইস</span>
     </span>
     <div class="flex-1 overflow-hidden relative whitespace-nowrap">
       <div class="animate-marquee whitespace-nowrap text-xs font-bold inline-block">
@@ -388,9 +412,12 @@ if (!empty($slider_products)) {
   <div class="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-fade-in">
     <!-- Header -->
     <div class="bg-primary text-white p-5 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <i class="fas fa-bullhorn text-gold text-lg animate-bounce"></i>
-        <h3 class="font-extrabold text-base">আজকের রেট লিস্ট</h3>
+      <div class="flex items-center gap-2.5">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <h3 class="font-extrabold text-base">আজকের লাইভ রেট লিস্ট</h3>
       </div>
       <button onclick="closeRateModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
         <i class="fas fa-times"></i>
@@ -436,28 +463,7 @@ if (!empty($slider_products)) {
 </div>
 
 <!-- Bottom Nav -->
-<nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
-  <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-home"></i></span>
-    <span>হোম</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-    <span>ম্যাপ</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-    <span>রিটেইলার</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-book"></i></span>
-    <span>লেনদেন</span>
-  </a>
-  <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-    <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-    <span>বিক্রি</span>
-  </a>
-</nav>
+<?php $activePage = 'dashboard'; include dirname(__DIR__) . '/includes/agent-nav.php'; ?>
 
 <script>
 const labels = <?= json_encode($chartLabels) ?>;

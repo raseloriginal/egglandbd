@@ -52,6 +52,28 @@ $currency = getSetting('currency_symbol', '৳');
       }
     </script>
     <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
+    <style>
+    @media (min-width: 480px) {
+      html {
+        background-color: #0f172a;
+      }
+      body {
+        max-width: 480px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        position: relative !important;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.3) !important;
+        min-height: 100vh !important;
+      }
+      .fixed {
+        max-width: 480px !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+    }
+    </style>
 </head>
 <body class="bg-brandbg min-h-full flex flex-col font-sans antialiased text-slate-800 pb-20">
     <header class="bg-primary text-white h-14 flex items-center px-4 sticky top-0 z-50 shadow-md">
@@ -130,28 +152,7 @@ $currency = getSetting('currency_symbol', '৳');
     </main>
 
     <!-- Bottom Nav -->
-    <nav class="bg-white border-t border-slate-100 h-16 fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 shadow-lg">
-        <a href="<?= BASE_URL ?>/agent/dashboard.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-            <span class="text-lg"><i class="fas fa-home"></i></span>
-            <span>হোম</span>
-        </a>
-        <a href="<?= BASE_URL ?>/agent/operation.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-            <span class="text-lg"><i class="fas fa-map-marked-alt"></i></span>
-            <span>ম্যাপ</span>
-        </a>
-        <a href="<?= BASE_URL ?>/agent/retailers.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-            <span class="text-lg"><i class="fas fa-warehouse"></i></span>
-            <span>রিটেইলার</span>
-        </a>
-        <a href="<?= BASE_URL ?>/agent/ledger.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-primary transition-colors">
-            <span class="text-lg"><i class="fas fa-book"></i></span>
-            <span>লেনদেন</span>
-        </a>
-        <a href="<?= BASE_URL ?>/agent/sales.php" class="flex flex-col items-center gap-1 text-[11px] font-bold text-primary transition-colors">
-            <span class="text-lg"><i class="fas fa-chart-line"></i></span>
-            <span>বিক্রি</span>
-        </a>
-    </nav>
+    <?php $activePage = 'sales'; include dirname(__DIR__) . '/includes/agent-nav.php'; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const en2bn = (num) => {
