@@ -520,6 +520,12 @@ $currency = getSetting('currency_symbol', '৳');
   </div>
 </div>
 
+<!-- Fullscreen Loading Overlay -->
+<div id="appLoadingOverlay" class="fixed inset-0 bg-white/95 backdrop-blur-sm z-[2000] flex flex-col items-center justify-center transition-opacity duration-300">
+  <div class="w-12 h-12 border-4 border-slate-100 border-t-primary rounded-full animate-spin shadow-md"></div>
+  <div class="mt-4 text-sm font-black text-slate-600 tracking-wide" id="loadingText">ম্যাপ লোড হচ্ছে...</div>
+</div>
+
 <!-- Fullscreen Location Picker Map Overlay -->
 <div id="locationPickerOverlay" class="hidden fixed inset-0 bg-white z-[1000] flex-col">
   <div class="h-14 bg-gradient-to-r from-primary to-primary-light px-4 flex items-center justify-between text-white shadow-md">
@@ -635,6 +641,12 @@ function initMap() {
     }
     if (currentTab === 'sales') loadSalesMarkers();
     else loadDelivMarkers();
+
+    const loader = document.getElementById('appLoadingOverlay');
+    if (loader) {
+      loader.classList.add('opacity-0');
+      setTimeout(() => loader.classList.add('hidden'), 300);
+    }
   };
 
   // Fallback timer if GPS takes > 1.2s to acquire
@@ -957,6 +969,12 @@ function switchTab(tab) {
   const tabSales = document.getElementById('tabSales');
   const tabDelivery = document.getElementById('tabDelivery');
   
+  const loader = document.getElementById('appLoadingOverlay');
+  if (loader) {
+    document.getElementById('loadingText').textContent = tab === 'sales' ? 'বিক্রি মোড লোড হচ্ছে...' : 'ডেলিভারি মোড লোড হচ্ছে...';
+    loader.classList.remove('hidden', 'opacity-0');
+  }
+  
   fetch(BASE_URL + '/api/agent_retailers.php')
     .then(r => r.json())
     .then(data => {
@@ -966,7 +984,13 @@ function switchTab(tab) {
       }
       executeTabSwitch(tab);
     })
-    .catch(() => executeTabSwitch(tab));
+    .catch(() => executeTabSwitch(tab))
+    .finally(() => {
+      if (loader) {
+        loader.classList.add('opacity-0');
+        setTimeout(() => loader.classList.add('hidden'), 300);
+      }
+    });
 }
 
 function updateHeaderBadges() {
