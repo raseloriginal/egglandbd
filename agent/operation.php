@@ -69,8 +69,6 @@ $currency = getSetting('currency_symbol', '৳');
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <style>
 /* CSS transition helpers for sheets and custom Leaflet styles */
 .bottom-sheet {
@@ -154,27 +152,17 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Search Overlay on Map -->
 <div class="fixed top-[112px] left-4 right-4 z-[400]">
-  <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg flex items-center p-2 border border-slate-100">
+  <div class="relative bg-white rounded-2xl shadow-lg flex items-center p-2 border border-slate-200">
     <i class="fas fa-search text-slate-400 ml-2"></i>
     <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
-    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 mr-1 transition-colors shrink-0"><i class="fas fa-times"></i></button>
+    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i class="fas fa-times"></i></button>
   </div>
-  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-100/50">
+  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-200">
     <!-- Suggestions here -->
   </div>
 </div>
 
-<!-- Map Legend -->
-<div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
-  <div id="legend-sales">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>অর্ডার নেই</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>অর্ডার আছে</div>
-  </div>
-  <div id="legend-delivery" class="hidden">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
-  </div>
-</div>
+
 
 <!-- Bottom Nav -->
 <?php $activePage = 'operation'; include dirname(__DIR__) . '/includes/agent-nav.php'; ?>
@@ -368,7 +356,6 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Leaflet JS -->
 <script src="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
 // ===== DATA FROM PHP =====
@@ -395,7 +382,7 @@ let pendingRetailerId = null;
 let userMarker        = null;
 let userLatLng        = null;
 let radiusCircle      = null;
-let markerClusterGroup = null;
+let markerLayerGroup  = null;
 let forcedRetailerId   = null;
 
 // ===== MAP INIT =====
@@ -407,57 +394,25 @@ function initMap() {
     zoomControl: false, 
     attributionControl: false,
     fadeAnimation: false,
-    zoomAnimation: true,
+    zoomAnimation: false,
     markerZoomAnimation: false
   }).setView([MAP_LAT, MAP_LNG], 19);
   
-  // OpenStreetMap Base
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-    maxZoom: 19,
-    updateWhenZooming: false,
-    updateWhenIdle: true
-  });
-  
-  // Google Maps Road Base (uses Google's tile server directly via Leaflet without requiring API keys)
-  const googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  // Single tile layer — Google Streets (lightest for BD)
+  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     updateWhenZooming: false,
-    updateWhenIdle: true
-  });
+    updateWhenIdle: true,
+    keepBuffer: 2
+  }).addTo(mapInstance);
 
-  const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    updateWhenZooming: false,
-    updateWhenIdle: true
-  });
-
-  // Load Google Streets as default, OSM as secondary fallback
-  googleStreets.addTo(mapInstance);
-
-  // Add layer controls so the agent can toggle between Leaflet's OpenStreetMap, Google Streets, and Google Satellite Hybrid
-  const baseMaps = {
-    "Google Streets": googleStreets,
-    "Google Satellite": googleHybrid,
-    "OpenStreetMap": osm
-  };
-  L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(mapInstance);
-
-  markerClusterGroup = L.markerClusterGroup({
-    disableClusteringAtZoom: 18,
-    maxClusterRadius: 50,
-    spiderfyOnMaxZoom: false,
-    showCoverageOnHover: false,
-    animate: false,
-    animateAddingMarkers: false,
-    chunkedLoading: true
-  });
-  mapInstance.addLayer(markerClusterGroup);
+  // Simple layer group instead of heavy MarkerCluster
+  markerLayerGroup = L.layerGroup().addTo(mapInstance);
 
   loadSalesMarkers();
 
-  // Track user location with smart throttling for low-end mobile devices
+  // Track user location — throttled for low-end devices
   if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition((pos) => {
       const lat = pos.coords.latitude;
@@ -465,16 +420,11 @@ function initMap() {
       const newLatLng = L.latLng(lat, lng);
 
       if (!userMarker) {
-        const userIcon = L.divIcon({
-          className: '',
-          html: `<div style="width: 18px; height: 18px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-          zIndexOffset: 1000
-        });
-        userMarker = L.marker([lat, lng], {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
+        userMarker = L.circleMarker([lat, lng], {
+          radius: 8, fillColor: '#3b82f6', fillOpacity: 1, color: '#fff', weight: 3, pane: 'markerPane'
+        }).addTo(mapInstance);
         userMarker.on('click', () => {
-          if (userLatLng) mapInstance.flyTo(userLatLng, 19);
+          if (userLatLng) mapInstance.setView(userLatLng, 19);
         });
       } else {
         userMarker.setLatLng([lat, lng]);
@@ -483,14 +433,14 @@ function initMap() {
       userLatLng = newLatLng;
       
       if (!radiusCircle) {
-        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
-        mapInstance.flyTo(userLatLng, 19);
+        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.08, weight: 1.5 }).addTo(mapInstance);
+        mapInstance.setView(userLatLng, 19);
       } else {
         radiusCircle.setLatLng(userLatLng);
       }
 
-      // Re-render markers only if agent moved significantly (> 3 meters) or first time
-      if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 3) {
+      // Re-render markers only if agent moved > 5 meters or first time
+      if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 5) {
         lastRenderLatLng = userLatLng;
         if (currentTab === 'sales') loadSalesMarkers();
         else loadDelivMarkers();
@@ -499,82 +449,70 @@ function initMap() {
       console.log("Location tracking error", err);
     }, {
       enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 10000
+      maximumAge: 8000,
+      timeout: 15000
     });
   }
 }
 
-function makeIcon(color, iconHtml, label) {
-  const badgeClass = color === '#6B7280' ? 'bg-slate-800/95 text-white border-slate-700' : (color === '#16A34A' ? 'bg-green-600/95 text-white border-green-500' : 'bg-blue-600/95 text-white border-blue-500');
-  return L.divIcon({
+// ===== LIGHTWEIGHT MARKERS (mobile-tap friendly) =====
+function addRetailerMarker(r, color, clickHandler) {
+  const label = r.shop_name || r.name;
+  const icon = L.divIcon({
     className: '',
-    html: `
-      <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-        <!-- Floating Label Card -->
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 ${badgeClass} text-[9px] font-black rounded-xl shadow-lg shadow-black/15 whitespace-nowrap border select-none z-10 leading-none">
-          ${label}
-        </div>
-        <!-- Little arrow below label -->
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-1.5 h-1.5 rotate-45 z-0" style="background-color: ${color}; opacity: 0.95;"></div>
-        <!-- Droplet Pin Icon -->
-        <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid #fff;">
-          <span style="transform:rotate(45deg);font-size:13px;color:#fff;display:flex;align-items:center;justify-content:center;">${iconHtml}</span>
-        </div>
-      </div>
-    `,
-    iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36]
+    html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color + ';border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
   });
+  const m = L.marker([parseFloat(r.lat), parseFloat(r.lng)], { icon: icon });
+  m.bindTooltip(label, { permanent: true, direction: 'top', offset: [0, -12], className: 'map-tooltip', interactive: true });
+  m.on('click', clickHandler);
+  m.getTooltip() && m.getTooltip().on && m.on('tooltipopen', function() {
+    // Ensure tooltip click also triggers the handler
+    const tip = this.getTooltip();
+    if (tip && tip._container) {
+      tip._container.style.cursor = 'pointer';
+      tip._container.onclick = clickHandler;
+    }
+  });
+  markerLayerGroup.addLayer(m);
+  return m;
 }
 
 // ===== SALES MARKERS =====
 function loadSalesMarkers() {
-  if (markerClusterGroup) {
-    markerClusterGroup.clearLayers();
-  }
+  markerLayerGroup.clearLayers();
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
+    if (!userLatLng && r.id != forcedRetailerId) return;
     if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
-    const iconHtml = hasOrder ? '<i class="fas fa-check"></i>' : '<i class="fas fa-store"></i>';
-    const label = r.shop_name ? r.shop_name : r.name;
-    const icon = makeIcon(color, iconHtml, label);
-    const marker = L.marker([r.lat, r.lng], {icon});
-    marker.on('click', () => {
+    const marker = addRetailerMarker(r, color, () => {
       if (hasOrder) openOrderWarning(r);
       else openNewOrder(r);
     });
-    markerClusterGroup.addLayer(marker);
     salesMarkers.push(marker);
   });
 }
 
 // ===== DELIVERY MARKERS =====
 function loadDelivMarkers() {
-  if (markerClusterGroup) {
-    markerClusterGroup.clearLayers();
-  }
+  markerLayerGroup.clearLayers();
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
+    if (!userLatLng && r.id != forcedRetailerId) return;
     if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
-    const iconHtml = hasDelivery ? '<i class="fas fa-truck"></i>' : '<i class="fas fa-store"></i>';
-    const label = r.shop_name ? r.shop_name : r.name;
-    const icon = makeIcon(color, iconHtml, label);
-    const marker = L.marker([r.lat, r.lng], {icon});
-    marker.on('click', () => {
+    const marker = addRetailerMarker(r, color, () => {
       if (hasDelivery) openDelivery(r);
       else openReadySale(r);
     });
-    markerClusterGroup.addLayer(marker);
     delivMarkers.push(marker);
   });
 }
@@ -631,7 +569,7 @@ function focusRetailerOnMap(r) {
   if (currentTab === 'sales') loadSalesMarkers();
   else loadDelivMarkers();
   
-  mapInstance.flyTo([r.lat, r.lng], 19, { animate: true, duration: 1.5 });
+  mapInstance.setView([r.lat, r.lng], 19);
 }
 
 // ===== TAB SWITCH =====
@@ -1241,7 +1179,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const banglaDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
     return String(num).replace(/[0-9]/g, w => banglaDigits[w]);
   };
+  const mapEl = document.getElementById('leaflet-map');
   const walkDOM = (node) => {
+    // Skip the map container entirely to prevent marker/tooltip churn
+    if (node === mapEl) return;
     if (node.nodeType === 3) {
       if (node.nodeValue.match(/[0-9]/)) {
         node.nodeValue = en2bn(node.nodeValue);
@@ -1253,10 +1194,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   walkDOM(document.body);
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
+  // Observe only non-map UI for digit conversion (bottom sheets, header, etc.)
+  document.querySelectorAll('.bottom-sheet, header, .fixed').forEach(el => {
+    if (el === mapEl || mapEl.contains(el) || el.contains(mapEl)) return;
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
+    });
+    observer.observe(el, { childList: true, subtree: true });
   });
-  observer.observe(document.body, { childList: true, subtree: true });
 });
 </script>
 </body>
