@@ -69,6 +69,8 @@ $currency = getSetting('currency_symbol', '৳');
 <?php include dirname(__DIR__) . '/includes/fontawesome.php'; ?>
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
 <style>
 /* CSS transition helpers for sheets and custom Leaflet styles */
 .bottom-sheet {
@@ -121,62 +123,60 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Header -->
 <header class="bg-primary text-white h-14 flex items-center px-4 fixed top-0 left-0 right-0 z-[300] shadow-md">
-  <div class="flex items-center gap-2.5 w-full">
+  <div class="flex items-center gap-3 w-full">
     <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
     <div class="flex-grow">
       <h1 class="text-sm font-bold leading-tight">অপারেশন ম্যাপ</h1>
       <p class="text-[10px] text-white/60 font-semibold" id="tabLabel">বিক্রি মোড</p>
     </div>
-    <button class="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform" onclick="toggleSearch()">
-      <i class="fas fa-search text-sm"></i>
-    </button>
-    <button class="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform" onclick="openAddRetailerSheet()">
+    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="openAddRetailerSheet()">
       <i class="fas fa-plus text-sm"></i>
     </button>
-    <button class="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform" onclick="reloadMap()">
+    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="reloadMap()">
       <i class="fas fa-redo text-sm"></i>
     </button>
-    <button class="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition-transform" onclick="window.location='/egglandbd/agent/dashboard.php'">
+    <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="window.location='/egglandbd/agent/dashboard.php'">
       <i class="fas fa-arrow-left text-sm"></i>
-    </button>
+    </div>
   </div>
 </header>
 
 <!-- Tab Bar -->
-<div class="flex bg-white fixed top-14 left-0 right-0 h-14 z-[250] shadow-sm border-b border-slate-200">
-  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-primary text-white shadow-md">
-    <i class="fas fa-shopping-cart text-sm"></i> বিক্রি
+<div class="flex bg-white border-b-2 border-slate-200 fixed top-14 left-0 right-0 h-12 z-[250] shadow-md">
+  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-black text-primary transition-all border-b-2 border-primary">
+    <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> বিক্রি
   </button>
-  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-slate-100 text-slate-500">
-    <i class="fas fa-shipping-fast text-sm"></i> ডেলিভারি
+  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-extrabold text-slate-700 hover:text-primary transition-all border-b-2 border-transparent">
+    <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> ডেলিভারি
   </button>
 </div>
 
 <!-- Map Container -->
-<div id="leaflet-map" class="fixed top-[112px] bottom-16 left-0 w-full z-10"></div>
+<div id="leaflet-map" class="fixed top-[104px] bottom-16 left-0 w-full z-10"></div>
 
-<<<<<<< HEAD
-<!-- Search Overlay on Map (hidden by default, toggle with header icon) -->
-<div id="searchContainer" class="fixed top-[118px] left-3 right-3 z-[400] hidden">
-  <div class="relative bg-white rounded-2xl shadow-lg flex items-center p-2 border border-slate-200">
-    <i class="fas fa-search text-slate-400 ml-2"></i>
-    <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
-    <button id="mapSearchClearBtn" onclick="closeSearch()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 active:scale-90 transition-transform"><i class="fas fa-times"></i></button>
-=======
 <!-- Search Overlay on Map -->
 <div class="fixed top-[112px] left-4 right-4 z-[400]">
-  <div class="relative bg-white rounded-2xl shadow-lg flex items-center p-2 border border-slate-200">
+  <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg flex items-center p-2 border border-slate-100">
     <i class="fas fa-search text-slate-400 ml-2"></i>
     <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
-    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i class="fas fa-times"></i></button>
->>>>>>> 7b77ee8cdc22579170a5c6f678849384e5b61526
+    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 mr-1 transition-colors shrink-0"><i class="fas fa-times"></i></button>
   </div>
-  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-200">
+  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-100/50">
     <!-- Suggestions here -->
   </div>
 </div>
 
-
+<!-- Map Legend -->
+<div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
+  <div id="legend-sales">
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>অর্ডার নেই</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>অর্ডার আছে</div>
+  </div>
+  <div id="legend-delivery" class="hidden">
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
+    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
+  </div>
+</div>
 
 <!-- Bottom Nav -->
 <?php $activePage = 'operation'; include dirname(__DIR__) . '/includes/agent-nav.php'; ?>
@@ -370,6 +370,7 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- Leaflet JS -->
 <script src="<?= BASE_URL ?>/assets/vendor/leaflet/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
 // ===== DATA FROM PHP =====
@@ -396,7 +397,7 @@ let pendingRetailerId = null;
 let userMarker        = null;
 let userLatLng        = null;
 let radiusCircle      = null;
-let markerLayerGroup  = null;
+let markerClusterGroup = null;
 let forcedRetailerId   = null;
 
 // ===== MAP INIT =====
@@ -408,25 +409,57 @@ function initMap() {
     zoomControl: false, 
     attributionControl: false,
     fadeAnimation: false,
-    zoomAnimation: false,
+    zoomAnimation: true,
     markerZoomAnimation: false
   }).setView([MAP_LAT, MAP_LNG], 19);
   
-  // Single tile layer — Google Streets (lightest for BD)
-  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  // OpenStreetMap Base
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    maxZoom: 19,
+    updateWhenZooming: false,
+    updateWhenIdle: true
+  });
+  
+  // Google Maps Road Base (uses Google's tile server directly via Leaflet without requiring API keys)
+  const googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     updateWhenZooming: false,
-    updateWhenIdle: true,
-    keepBuffer: 2
-  }).addTo(mapInstance);
+    updateWhenIdle: true
+  });
 
-  // Simple layer group instead of heavy MarkerCluster
-  markerLayerGroup = L.layerGroup().addTo(mapInstance);
+  const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    updateWhenZooming: false,
+    updateWhenIdle: true
+  });
+
+  // Load Google Streets as default, OSM as secondary fallback
+  googleStreets.addTo(mapInstance);
+
+  // Add layer controls so the agent can toggle between Leaflet's OpenStreetMap, Google Streets, and Google Satellite Hybrid
+  const baseMaps = {
+    "Google Streets": googleStreets,
+    "Google Satellite": googleHybrid,
+    "OpenStreetMap": osm
+  };
+  L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(mapInstance);
+
+  markerClusterGroup = L.markerClusterGroup({
+    disableClusteringAtZoom: 18,
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    animate: false,
+    animateAddingMarkers: false,
+    chunkedLoading: true
+  });
+  mapInstance.addLayer(markerClusterGroup);
 
   loadSalesMarkers();
 
-  // Track user location — throttled for low-end devices
+  // Track user location with smart throttling for low-end mobile devices
   if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition((pos) => {
       const lat = pos.coords.latitude;
@@ -434,11 +467,16 @@ function initMap() {
       const newLatLng = L.latLng(lat, lng);
 
       if (!userMarker) {
-        userMarker = L.circleMarker([lat, lng], {
-          radius: 8, fillColor: '#3b82f6', fillOpacity: 1, color: '#fff', weight: 3, pane: 'markerPane'
-        }).addTo(mapInstance);
+        const userIcon = L.divIcon({
+          className: '',
+          html: `<div style="width: 18px; height: 18px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          zIndexOffset: 1000
+        });
+        userMarker = L.marker([lat, lng], {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
         userMarker.on('click', () => {
-          if (userLatLng) mapInstance.setView(userLatLng, 19);
+          if (userLatLng) mapInstance.flyTo(userLatLng, 19);
         });
       } else {
         userMarker.setLatLng([lat, lng]);
@@ -447,14 +485,14 @@ function initMap() {
       userLatLng = newLatLng;
       
       if (!radiusCircle) {
-        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.08, weight: 1.5 }).addTo(mapInstance);
-        mapInstance.setView(userLatLng, 19);
+        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
+        mapInstance.flyTo(userLatLng, 19);
       } else {
         radiusCircle.setLatLng(userLatLng);
       }
 
-      // Re-render markers only if agent moved > 5 meters or first time
-      if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 5) {
+      // Re-render markers only if agent moved significantly (> 3 meters) or first time
+      if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 3) {
         lastRenderLatLng = userLatLng;
         if (currentTab === 'sales') loadSalesMarkers();
         else loadDelivMarkers();
@@ -463,70 +501,82 @@ function initMap() {
       console.log("Location tracking error", err);
     }, {
       enableHighAccuracy: true,
-      maximumAge: 8000,
-      timeout: 15000
+      maximumAge: 5000,
+      timeout: 10000
     });
   }
 }
 
-// ===== LIGHTWEIGHT MARKERS (mobile-tap friendly) =====
-function addRetailerMarker(r, color, clickHandler) {
-  const label = r.shop_name || r.name;
-  const icon = L.divIcon({
+function makeIcon(color, iconHtml, label) {
+  const badgeClass = color === '#6B7280' ? 'bg-slate-800/95 text-white border-slate-700' : (color === '#16A34A' ? 'bg-green-600/95 text-white border-green-500' : 'bg-blue-600/95 text-white border-blue-500');
+  return L.divIcon({
     className: '',
-    html: '<div style="width:22px;height:22px;border-radius:50%;background:' + color + ';border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>',
-    iconSize: [22, 22],
-    iconAnchor: [11, 11]
+    html: `
+      <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+        <!-- Floating Label Card -->
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 ${badgeClass} text-[9px] font-black rounded-xl shadow-lg shadow-black/15 whitespace-nowrap border select-none z-10 leading-none">
+          ${label}
+        </div>
+        <!-- Little arrow below label -->
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-1.5 h-1.5 rotate-45 z-0" style="background-color: ${color}; opacity: 0.95;"></div>
+        <!-- Droplet Pin Icon -->
+        <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid #fff;">
+          <span style="transform:rotate(45deg);font-size:13px;color:#fff;display:flex;align-items:center;justify-content:center;">${iconHtml}</span>
+        </div>
+      </div>
+    `,
+    iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36]
   });
-  const m = L.marker([parseFloat(r.lat), parseFloat(r.lng)], { icon: icon });
-  m.bindTooltip(label, { permanent: true, direction: 'top', offset: [0, -12], className: 'map-tooltip', interactive: true });
-  m.on('click', clickHandler);
-  m.getTooltip() && m.getTooltip().on && m.on('tooltipopen', function() {
-    // Ensure tooltip click also triggers the handler
-    const tip = this.getTooltip();
-    if (tip && tip._container) {
-      tip._container.style.cursor = 'pointer';
-      tip._container.onclick = clickHandler;
-    }
-  });
-  markerLayerGroup.addLayer(m);
-  return m;
 }
 
 // ===== SALES MARKERS =====
 function loadSalesMarkers() {
-  markerLayerGroup.clearLayers();
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+  }
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
     if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
-    const marker = addRetailerMarker(r, color, () => {
+    const iconHtml = hasOrder ? '<i class="fas fa-check"></i>' : '<i class="fas fa-store"></i>';
+    const label = r.shop_name ? r.shop_name : r.name;
+    const icon = makeIcon(color, iconHtml, label);
+    const marker = L.marker([r.lat, r.lng], {icon});
+    marker.on('click', () => {
       if (hasOrder) openOrderWarning(r);
       else openNewOrder(r);
     });
+    markerClusterGroup.addLayer(marker);
     salesMarkers.push(marker);
   });
 }
 
 // ===== DELIVERY MARKERS =====
 function loadDelivMarkers() {
-  markerLayerGroup.clearLayers();
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+  }
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return;
+    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
     if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
     
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
-    const marker = addRetailerMarker(r, color, () => {
+    const iconHtml = hasDelivery ? '<i class="fas fa-truck"></i>' : '<i class="fas fa-store"></i>';
+    const label = r.shop_name ? r.shop_name : r.name;
+    const icon = makeIcon(color, iconHtml, label);
+    const marker = L.marker([r.lat, r.lng], {icon});
+    marker.on('click', () => {
       if (hasDelivery) openDelivery(r);
       else openReadySale(r);
     });
+    markerClusterGroup.addLayer(marker);
     delivMarkers.push(marker);
   });
 }
@@ -534,30 +584,16 @@ function loadDelivMarkers() {
 
 
 // ===== MAP SEARCH =====
-function toggleSearch() {
-  const container = document.getElementById('searchContainer');
-  if (container.classList.contains('hidden')) {
-    container.classList.remove('hidden');
-    document.getElementById('mapSearchInput').focus();
-  } else {
-    closeSearch();
-  }
-}
-
-function closeSearch() {
-  const container = document.getElementById('searchContainer');
-  container.classList.add('hidden');
-  clearMapSearch();
-}
-
 function handleMapSearch(query) {
   const container = document.getElementById('mapSearchSuggestions');
   const clearBtn = document.getElementById('mapSearchClearBtn');
   if (!query.trim()) {
     container.classList.add('hidden');
+    clearBtn.classList.add('hidden');
     return;
   }
   
+  clearBtn.classList.remove('hidden');
   const q = query.toLowerCase();
   const matched = RETAILERS.filter(r => (r.name && r.name.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q))).slice(0, 10);
   
@@ -579,6 +615,7 @@ function handleMapSearch(query) {
 function clearMapSearch() {
   document.getElementById('mapSearchInput').value = '';
   document.getElementById('mapSearchSuggestions').classList.add('hidden');
+  document.getElementById('mapSearchClearBtn').classList.add('hidden');
   forcedRetailerId = null;
   if (currentTab === 'sales') loadSalesMarkers();
   else loadDelivMarkers();
@@ -596,7 +633,7 @@ function focusRetailerOnMap(r) {
   if (currentTab === 'sales') loadSalesMarkers();
   else loadDelivMarkers();
   
-  mapInstance.setView([r.lat, r.lng], 19);
+  mapInstance.flyTo([r.lat, r.lng], 19, { animate: true, duration: 1.5 });
 }
 
 // ===== TAB SWITCH =====
@@ -605,7 +642,7 @@ function switchTab(tab) {
   
   const icon = tab === 'sales' ? document.querySelector('#tabSales i') : document.querySelector('#tabDelivery i');
   const ogClass = icon.className;
-  icon.className = 'fas fa-spinner fa-spin text-sm';
+  icon.className = 'fas fa-spinner fa-spin';
 
   fetch(BASE_URL + '/api/agent_retailers.php')
     .then(r => r.json())
@@ -630,14 +667,24 @@ function executeTabSwitch(tab) {
   const tabDelivery = document.getElementById('tabDelivery');
   
   if (tab === 'sales') {
-    tabSales.className = "flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-primary text-white shadow-md";
-    tabDelivery.className = "flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-slate-100 text-slate-500";
+    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
+    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
   } else {
-    tabSales.className = "flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-slate-100 text-slate-500";
-    tabDelivery.className = "flex-1 flex items-center justify-center gap-2 text-xs font-extrabold transition-all active:scale-95 m-1.5 rounded-xl bg-primary text-white shadow-md";
+    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
+    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
   }
   
   document.getElementById('tabLabel').textContent = tab === 'sales' ? 'বিক্রি মোড' : 'ডেলিভারি মোড';
+  
+  const legendSales = document.getElementById('legend-sales');
+  const legendDelivery = document.getElementById('legend-delivery');
+  if (tab === 'sales') {
+    legendSales.classList.remove('hidden');
+    legendDelivery.classList.add('hidden');
+  } else {
+    legendSales.classList.add('hidden');
+    legendDelivery.classList.remove('hidden');
+  }
 
   if (tab === 'sales') {
     delivMarkers = [];
@@ -699,15 +746,15 @@ function renderProductList() {
         <div class="flex-1 relative">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
           <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
-                 id="price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" inputmode="decimal" oninput="updatePrice(${p.id})">
+                 id="price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updatePrice(${p.id})">
           <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
         </div>
         
         <!-- Qty Input -->
-        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-36 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-          <button type="button" class="w-10 h-10 rounded-xl bg-white text-slate-700 font-black text-xl shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-90 hover:text-primary transition-transform select-none" onclick="changeQty(${p.id}, -1)">−</button>
-          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="qty_${p.id}" value="0" min="0" type="number" inputmode="numeric" pattern="[0-9]*" oninput="updateTotal(${p.id})">
-          <button type="button" class="w-10 h-10 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-xl shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-90 transition-transform select-none border border-primary-dark" onclick="changeQty(${p.id}, 1)">+</button>
+        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeQty(${p.id}, -1)">−</button>
+          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeQty(${p.id}, 1)">+</button>
         </div>
       </div>`;
     container.appendChild(item);
@@ -861,15 +908,15 @@ function openReadySale(retailer) {
         <div class="flex-1 relative">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
           <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
-                 id="rs_price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" inputmode="decimal" oninput="updateRSTotal(${p.id})">
+                 id="rs_price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updateRSTotal(${p.id})">
           <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
         </div>
         
         <!-- Qty Input -->
-        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-36 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-          <button type="button" class="w-10 h-10 rounded-xl bg-white text-slate-700 font-black text-xl shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-90 hover:text-primary transition-transform select-none" onclick="changeRSQty(${p.id}, -1, ${p.price})">−</button>
-          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="rs_qty_${p.id}" value="0" min="0" type="number" inputmode="numeric" pattern="[0-9]*" oninput="updateRSTotal(${p.id}, ${p.price})">
-          <button type="button" class="w-10 h-10 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-xl shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-90 transition-transform select-none border border-primary-dark" onclick="changeRSQty(${p.id}, 1, ${p.price})">+</button>
+        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeRSQty(${p.id}, -1, ${p.price})">−</button>
+          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="rs_qty_${p.id}" value="0" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeRSQty(${p.id}, 1, ${p.price})">+</button>
         </div>
       </div>`;
     container.appendChild(d);
@@ -968,12 +1015,12 @@ function openDelivery(retailer) {
           <div class="flex items-center gap-2 mt-1">
             <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
               <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">পরিমাণ</div>
-              <input type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700" value="${parseInt(item.qty||0)}" oninput="updateDelivItem(${index}, 'qty', this.value)">
+              <input type="number" step="1" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${parseInt(item.qty||0)}" oninput="updateDelivItem(${index}, 'qty', this.value)">
               <div class="px-2 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-l border-slate-200">${item.unit_type}</div>
             </div>
             <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
               <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">দাম</div>
-              <input type="number" step="0.01" min="0" inputmode="decimal" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700" value="${item.price}" oninput="updateDelivItem(${index}, 'price', this.value)">
+              <input type="number" step="0.01" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${item.price}" oninput="updateDelivItem(${index}, 'price', this.value)">
             </div>
           </div>
         `;
@@ -1020,7 +1067,7 @@ function updateDelivery(status) {
 // ===== TOAST =====
 function showToast(msg, type = 'success') {
   const t = document.createElement('div');
-  t.className = `fixed top-20 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-full text-xs font-bold z-[1000] shadow-xl whitespace-nowrap transition-all duration-300 ${type==='success'?'bg-green-600':'bg-red-600'}`;
+  t.className = `fixed bottom-20 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-full text-xs font-bold z-[1000] shadow-xl whitespace-nowrap transition-all duration-300 ${type==='success'?'bg-green-600':'bg-red-600'}`;
   t.innerHTML = `${type==='success'?'<i class="fas fa-check-circle mr-1"></i>':'<i class="fas fa-times-circle mr-1"></i>'} ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => {
@@ -1196,10 +1243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const banglaDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
     return String(num).replace(/[0-9]/g, w => banglaDigits[w]);
   };
-  const mapEl = document.getElementById('leaflet-map');
   const walkDOM = (node) => {
-    // Skip the map container entirely to prevent marker/tooltip churn
-    if (node === mapEl) return;
     if (node.nodeType === 3) {
       if (node.nodeValue.match(/[0-9]/)) {
         node.nodeValue = en2bn(node.nodeValue);
@@ -1211,14 +1255,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   walkDOM(document.body);
-  // Observe only non-map UI for digit conversion (bottom sheets, header, etc.)
-  document.querySelectorAll('.bottom-sheet, header, .fixed').forEach(el => {
-    if (el === mapEl || mapEl.contains(el) || el.contains(mapEl)) return;
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
-    });
-    observer.observe(el, { childList: true, subtree: true });
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
   });
+  observer.observe(document.body, { childList: true, subtree: true });
 });
 </script>
 </body>
