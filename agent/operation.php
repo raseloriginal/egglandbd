@@ -1064,11 +1064,11 @@ function renderProductList() {
       <!-- Quick Preset Quantity Chips -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
         <span class="text-[10px] font-bold text-slate-400 shrink-0">দ্রুত পরিমাণ:</span>
+        <button type="button" onclick="addQty(${p.id}, 2)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+2</button>
+        <button type="button" onclick="addQty(${p.id}, 5)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+5</button>
         <button type="button" onclick="addQty(${p.id}, 10)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+10</button>
-        <button type="button" onclick="addQty(${p.id}, 50)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+50</button>
-        <button type="button" onclick="addQty(${p.id}, 100)" class="px-2 py-0.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-extrabold text-xs transition-colors">+100</button>
-        <button type="button" onclick="addQty(${p.id}, 500)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+500</button>
-        <button type="button" onclick="addQty(${p.id}, 1000)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+1000</button>
+        <button type="button" onclick="addQty(${p.id}, 15)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+15</button>
+        <button type="button" onclick="addQty(${p.id}, 20)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+20</button>
       </div>
 
       <div class="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
@@ -1223,11 +1223,11 @@ function openReadySale(retailer) {
       <!-- Quick Preset Quantity Chips -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
         <span class="text-[10px] font-bold text-slate-400 shrink-0">দ্রুত পরিমাণ:</span>
+        <button type="button" onclick="addRSQty(${p.id}, 2)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+2</button>
+        <button type="button" onclick="addRSQty(${p.id}, 5)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+5</button>
         <button type="button" onclick="addRSQty(${p.id}, 10)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+10</button>
-        <button type="button" onclick="addRSQty(${p.id}, 50)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+50</button>
-        <button type="button" onclick="addRSQty(${p.id}, 100)" class="px-2 py-0.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 font-extrabold text-xs transition-colors">+100</button>
-        <button type="button" onclick="addRSQty(${p.id}, 500)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+500</button>
-        <button type="button" onclick="addRSQty(${p.id}, 1000)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+1000</button>
+        <button type="button" onclick="addRSQty(${p.id}, 15)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+15</button>
+        <button type="button" onclick="addRSQty(${p.id}, 20)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+20</button>
       </div>
 
       <div class="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
