@@ -31,16 +31,21 @@ if ($agentId) {
     $retailers = $stmt->fetchAll();
 }
 
+// Stats summary for header counters
+$totalRetailers = count($retailers);
+$totalOrdersPending = array_reduce($retailers, function($acc, $item) { return $acc + ($item['has_order'] > 0 ? 1 : 0); }, 0);
+$totalDeliveriesPending = array_reduce($retailers, function($acc, $item) { return $acc + ($item['has_delivery'] > 0 ? 1 : 0); }, 0);
+
 $currency = getSetting('currency_symbol', '৳');
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="bn" class="h-full">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#8B0032">
 <title>অপারেশন ম্যাপ — এগল্যান্ড বাংলাদেশ</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -60,7 +65,7 @@ $currency = getSetting('currency_symbol', '৳');
           brandbg: '#F0EBE8'
         },
         fontFamily: {
-          sans: ['Inter', 'sans-serif'],
+          sans: ['Inter', 'Hind Siliguri', 'sans-serif'],
         }
       }
     }
@@ -74,29 +79,54 @@ $currency = getSetting('currency_symbol', '৳');
 <style>
 /* CSS transition helpers for sheets and custom Leaflet styles */
 .bottom-sheet {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 } 
 .bottom-sheet.open {
   transform: translateY(0); 
 }
 
-/*efsh*/
 .bottom-sheet-overlay {
   transition: opacity 0.3s ease;
+  will-change: opacity;
 }
 .bottom-sheet-overlay.active {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Custom Marker Cluster Styling */
+.marker-cluster-small {
+  background-color: rgba(139, 0, 50, 0.2) !important;
+}
+.marker-cluster-small div {
+  background-color: rgba(139, 0, 50, 0.85) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+}
+.marker-cluster-medium {
+  background-color: rgba(245, 166, 35, 0.3) !important;
+}
+.marker-cluster-medium div {
+  background-color: rgba(212, 140, 22, 0.9) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+}
+
+/* Custom Map Tooltip */
 .map-tooltip {
   background: white;
   border: 1px solid #E5E7EB;
-  border-radius: 6px;
-  padding: 4px 8px;
+  border-radius: 8px;
+  padding: 4px 10px;
   font-weight: 700;
   font-size: 11px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
+
+/* Desktop mobile viewport constraining */
 @media (min-width: 480px) {
   html {
     background-color: #0f172a;
@@ -106,7 +136,7 @@ $currency = getSetting('currency_symbol', '৳');
     margin-left: auto !important;
     margin-right: auto !important;
     position: relative !important;
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.4) !important;
     min-height: 100vh !important;
   }
   .fixed {
@@ -117,64 +147,126 @@ $currency = getSetting('currency_symbol', '৳');
     margin-right: auto !important;
   }
 }
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
 </style>
 </head>
 <body class="bg-brandbg h-full w-full overflow-hidden select-none font-sans antialiased text-slate-800">
 
 <!-- Header -->
-<header class="bg-primary text-white h-14 flex items-center px-4 fixed top-0 left-0 right-0 z-[300] shadow-md">
+<header class="bg-primary/95 backdrop-blur-md text-white h-14 flex items-center px-4 fixed top-0 left-0 right-0 z-[300] shadow-lg border-b border-white/10">
   <div class="flex items-center gap-3 w-full">
-    <div class="w-8 h-8 bg-gold rounded-lg flex items-center justify-center text-primary font-black text-sm">E</div>
-    <div class="flex-grow">
-      <h1 class="text-sm font-bold leading-tight">অপারেশন ম্যাপ</h1>
-      <p class="text-[10px] text-white/60 font-semibold" id="tabLabel">বিক্রি মোড</p>
+    <div class="w-9 h-9 bg-gold rounded-xl flex items-center justify-center text-primary font-black text-base shadow-inner shrink-0">E</div>
+    <div class="flex-grow min-w-0">
+      <div class="flex items-center gap-2">
+        <h1 class="text-sm font-black leading-tight truncate">অপারেশন ম্যাপ</h1>
+        <span class="px-2 py-0.5 rounded-full bg-white/15 text-[10px] font-bold tracking-wide" id="tabLabel">বিক্রি মোড</span>
+      </div>
+      <!-- Stats summary subtitle -->
+      <div class="flex items-center gap-2 text-[10px] text-white/70 font-semibold mt-0.5">
+        <span>মোট দোকান: <strong class="text-gold font-bold"><?= $totalRetailers ?></strong></span>
+        <span>•</span>
+        <span>অর্ডার বাকি: <strong class="text-white font-bold" id="headerOrderBadge"><?= $totalOrdersPending ?></strong></span>
+      </div>
     </div>
-    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="openAddRetailerSheet()">
-      <i class="fas fa-plus text-sm"></i>
-    </button>
-    <button class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="reloadMap()">
-      <i class="fas fa-redo text-sm"></i>
-    </button>
-    <div class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors" onclick="window.location='/egglandbd/agent/dashboard.php'">
-      <i class="fas fa-arrow-left text-sm"></i>
+    
+    <!-- Action buttons -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button title="নতুন রিটেইলার যুক্ত করুন" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all" onclick="openAddRetailerSheet()">
+        <i class="fas fa-user-plus text-xs"></i>
+      </button>
+      <button title="ম্যাপ রিলোড করুন" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-all" onclick="reloadMap()">
+        <i class="fas fa-redo text-xs"></i>
+      </button>
+      <a href="<?= BASE_URL ?>/agent/dashboard.php" title="ড্যাশবোর্ডে ফিরুন" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center transition-all">
+        <i class="fas fa-arrow-left text-xs"></i>
+      </a>
     </div>
   </div>
 </header>
 
 <!-- Tab Bar -->
-<div class="flex bg-white border-b-2 border-slate-200 fixed top-14 left-0 right-0 h-12 z-[250] shadow-md">
-  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-black text-primary transition-all border-b-2 border-primary">
-    <span class="text-base mb-0.5"><i class="fas fa-shopping-cart"></i></span> বিক্রি
+<div class="flex bg-white/95 backdrop-blur-md border-b border-slate-200 fixed top-14 left-0 right-0 h-11 z-[250] shadow-sm">
+  <button id="tabSales" onclick="switchTab('sales')" class="flex-1 flex items-center justify-center gap-2 text-xs font-black text-primary border-b-2 border-primary transition-all">
+    <i class="fas fa-shopping-cart text-sm"></i>
+    <span>বিক্রি মোড</span>
+    <span class="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold" id="badgeSalesCount"><?= $totalOrdersPending ?></span>
   </button>
-  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex flex-col items-center justify-center text-[12px] font-extrabold text-slate-700 hover:text-primary transition-all border-b-2 border-transparent">
-    <span class="text-base mb-0.5"><i class="fas fa-shipping-fast"></i></span> ডেলিভারি
+  <button id="tabDelivery" onclick="switchTab('delivery')" class="flex-1 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-primary border-b-2 border-transparent transition-all">
+    <i class="fas fa-shipping-fast text-sm"></i>
+    <span>ডেলিভারি মোড</span>
+    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[10px] flex items-center justify-center font-bold" id="badgeDelivCount"><?= $totalDeliveriesPending ?></span>
   </button>
 </div>
 
 <!-- Map Container -->
-<div id="leaflet-map" class="fixed top-[104px] bottom-16 left-0 w-full z-10"></div>
+<div id="leaflet-map" class="fixed top-[100px] bottom-16 left-0 w-full z-10"></div>
 
 <!-- Search Overlay on Map -->
-<div class="fixed top-[112px] left-4 right-4 z-[400]">
-  <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg flex items-center p-2 border border-slate-100">
-    <i class="fas fa-search text-slate-400 ml-2"></i>
-    <input type="text" id="mapSearchInput" class="w-full pl-3 pr-2 py-2 text-sm outline-none font-bold placeholder:font-semibold bg-transparent" placeholder="রিটেইলার খুঁজুন..." oninput="handleMapSearch(this.value)">
-    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 mr-1 transition-colors shrink-0"><i class="fas fa-times"></i></button>
+<div class="fixed top-[108px] left-3 right-3 z-[400]">
+  <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-xl flex items-center p-1.5 border border-slate-200/80">
+    <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 ml-1">
+      <i class="fas fa-search text-xs"></i>
+    </div>
+    <input type="text" id="mapSearchInput" class="w-full pl-2.5 pr-2 py-1.5 text-xs outline-none font-bold placeholder:font-semibold placeholder:text-slate-400 bg-transparent" placeholder="রিটেইলার বা ফোন নাম্বারে খুঁজুন..." oninput="handleMapSearch(this.value)">
+    <button id="mapSearchClearBtn" onclick="clearMapSearch()" class="hidden w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 mr-1 transition-colors shrink-0">
+      <i class="fas fa-times text-xs"></i>
+    </button>
   </div>
-  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl overflow-hidden hidden max-h-56 overflow-y-auto border border-slate-100/50">
-    <!-- Suggestions here -->
+  <div id="mapSearchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden hidden max-h-60 overflow-y-auto border border-slate-100">
+    <!-- Suggestions populated dynamically -->
   </div>
 </div>
 
-<!-- Map Legend -->
-<div class="fixed bottom-20 right-4 z-40 bg-white/90 backdrop-blur-md rounded-xl p-3 border border-slate-200/60 shadow-lg text-[11px] font-bold space-y-1.5" id="mapLegend">
-  <div id="legend-sales">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>অর্ডার নেই</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600"></span>অর্ডার আছে</div>
+<!-- FLOATING MAP CONTROLS STACK (Right Side) -->
+<div class="fixed bottom-24 right-3 z-[200] flex flex-col gap-2.5 items-end">
+  
+  <!-- My Location GPS FAB -->
+  <button onclick="recenterUser()" title="আমার লোকেশনে যান" class="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-200/80 text-blue-600 flex items-center justify-center active:scale-90 hover:bg-blue-50 transition-all cursor-pointer">
+    <i class="fas fa-crosshairs text-base"></i>
+  </button>
+
+  <!-- Layer Switcher FAB -->
+  <div class="relative">
+    <button onclick="toggleLayerMenu()" title="ম্যাপ লেয়ার" class="w-11 h-11 rounded-2xl bg-white shadow-xl border border-slate-200/80 text-slate-700 flex items-center justify-center active:scale-90 hover:bg-slate-50 transition-all cursor-pointer">
+      <i class="fas fa-layer-group text-base"></i>
+    </button>
+    <div id="layerMenu" class="hidden absolute bottom-0 right-13 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 min-w-[140px] space-y-1 text-xs font-bold z-[210]">
+      <button onclick="setMapLayer('streets')" class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 flex items-center justify-between transition-colors">
+        <span>Google Maps</span>
+        <i class="fas fa-check text-primary text-xs" id="layerCheckStreets"></i>
+      </button>
+      <button onclick="setMapLayer('satellite')" class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 flex items-center justify-between transition-colors">
+        <span>Satellite</span>
+        <i class="fas fa-check text-primary text-xs hidden" id="layerCheckSat"></i>
+      </button>
+      <button onclick="setMapLayer('osm')" class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100 flex items-center justify-between transition-colors">
+        <span>OpenStreetMap</span>
+        <i class="fas fa-check text-primary text-xs hidden" id="layerCheckOsm"></i>
+      </button>
+    </div>
   </div>
-  <div id="legend-delivery" class="hidden">
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>ডেলিভারি নেই</div>
-    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>ডেলিভারি বাকি</div>
+
+  <!-- Collapsible Map Legend Pill -->
+  <div class="bg-white/90 backdrop-blur-md rounded-2xl p-2.5 border border-slate-200/80 shadow-xl text-[11px] font-bold space-y-1.5 min-w-[130px]" id="mapLegend">
+    <div id="legend-sales">
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span>অর্ডার বাকি নেই</div>
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-green-600 shrink-0"></span>পেন্ডিং অর্ডার</div>
+    </div>
+    <div id="legend-delivery" class="hidden">
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span>ডেলিভারি বাকি নেই</div>
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0"></span>পেন্ডিং ডেলিভারি</div>
+    </div>
   </div>
 </div>
 
@@ -183,20 +275,94 @@ $currency = getSetting('currency_symbol', '৳');
 
 <!-- ========== BOTTOM SHEETS ========== -->
 <!-- Overlay -->
-<div class="bottom-sheet-overlay fixed inset-0 bg-black/55 opacity-0 pointer-events-none z-[350]" id="bsOverlay" onclick="closeAllSheets()"></div>
+<div class="bottom-sheet-overlay fixed inset-0 bg-black/60 opacity-0 pointer-events-none z-[350]" id="bsOverlay" onclick="closeAllSheets()"></div>
+
+<!-- Sheet 0: Retailer Quick Hub (Tapped Marker / Search Result) -->
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetRetailerHub">
+  <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
+  <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl shrink-0 font-extrabold" id="hubAvatar">
+        <i class="fas fa-store"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900 leading-tight" id="hubRetailerName">রিটেইলার হাব</h3>
+        <p class="text-xs text-slate-400 font-semibold mt-0.5" id="hubShopName">দোকানের নাম</p>
+      </div>
+    </div>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
+  </div>
+  
+  <div class="p-5 flex-1 overflow-y-auto space-y-4">
+    <!-- Quick Contact & Address Card -->
+    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3.5 space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+          <i class="fas fa-phone-alt text-green-600"></i>
+          <span id="hubPhone">ফোন নম্বর</span>
+        </div>
+        <a id="btnHubCall" href="#" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+          <i class="fas fa-phone text-[10px]"></i> কল দিন
+        </a>
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 truncate pr-2">
+          <i class="fas fa-map-marker-alt text-primary"></i>
+          <span id="hubAddress" class="truncate">ঠিকানা</span>
+        </div>
+        <a id="btnHubNav" href="#" target="_blank" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
+          <i class="fas fa-directions text-[10px]"></i> নেভিগেট
+        </a>
+      </div>
+    </div>
+
+    <!-- Status Badges -->
+    <div id="hubStatusPills" class="flex gap-2">
+      <!-- Populated dynamically -->
+    </div>
+
+    <!-- Action Workflow Buttons -->
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">উপলব্ধ অ্যাকশন</div>
+    <div class="grid grid-cols-1 gap-2.5">
+      <button id="btnHubOrder" onclick="triggerHubAction('order')" class="w-full py-3.5 px-4 bg-gradient-to-r from-primary to-primary-light text-white rounded-xl text-sm font-bold shadow-md shadow-primary/25 flex items-center justify-between transition-all active:scale-[0.98]">
+        <span class="flex items-center gap-2.5">
+          <i class="fas fa-clipboard-list text-base"></i>
+          <span>নতুন অর্ডার প্লেস করুন</span>
+        </span>
+        <i class="fas fa-chevron-right text-xs opacity-70"></i>
+      </button>
+
+      <button id="btnHubReadySale" onclick="triggerHubAction('ready_sale')" class="w-full py-3.5 px-4 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl text-sm font-bold shadow-md shadow-green-600/25 flex items-center justify-between transition-all active:scale-[0.98]">
+        <span class="flex items-center gap-2.5">
+          <i class="fas fa-bolt text-base"></i>
+          <span>সরাসরি স্পট বিক্রি করুন</span>
+        </span>
+        <i class="fas fa-chevron-right text-xs opacity-70"></i>
+      </button>
+
+      <button id="btnHubDelivery" onclick="triggerHubAction('delivery')" class="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/25 flex items-center justify-between transition-all active:scale-[0.98]">
+        <span class="flex items-center gap-2.5">
+          <i class="fas fa-shipping-fast text-base"></i>
+          <span>পেন্ডিং ডেলিভারি আপডেট করুন</span>
+        </span>
+        <i class="fas fa-chevron-right text-xs opacity-70"></i>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Sheet 1: New Order -->
-<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetNewOrder">
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetNewOrder">
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
       <h3 class="text-base font-extrabold text-slate-900" id="soRetailerName">নতুন অর্ডার</h3>
       <p class="text-xs text-slate-400 font-semibold" id="soRetailerAddr">রিটেইলারের ঠিকানা</p>
     </div>
-    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
-    <div class="bg-primary/5 rounded-2xl p-4 flex items-center gap-3 border border-primary/10">
+    <div class="bg-primary/5 rounded-2xl p-3.5 flex items-center gap-3 border border-primary/10">
       <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-warehouse"></i></div>
       <div>
         <h4 class="text-sm font-bold text-slate-900 leading-snug" id="soRName2">রিটেইলারের নাম</h4>
@@ -207,14 +373,14 @@ $currency = getSetting('currency_symbol', '৳');
     <div class="space-y-3" id="orderProductList">
       <!-- Populated by JS -->
     </div>
-    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
-      <span class="text-lg font-black text-primary" id="orderTotalVal"><?= $currency ?>0</span>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100 shadow-inner">
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট অর্ডার মূল্য</span>
+      <span class="text-xl font-black text-primary" id="orderTotalVal"><?= $currency ?>0.00</span>
     </div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white shrink-0">
-    <button class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98]" id="btnPlaceOrder" onclick="placeOrder()">
-      <i class="fas fa-clipboard-list mr-1.5"></i> অর্ডার কনফার্ম করুন
+    <button class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-2xl text-base font-bold shadow-lg shadow-primary/25 transition-all active:scale-[0.98]" id="btnPlaceOrder" onclick="placeOrder()">
+      <i class="fas fa-clipboard-check mr-1.5"></i> অর্ডার কনফার্ম করুন
     </button>
   </div>
 </div>
@@ -224,71 +390,71 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
-      <h3 class="text-base font-extrabold text-slate-900"><i class="fas fa-exclamation-triangle text-amber-500 mr-1.5"></i> অর্ডার ইতিমধ্যে দেওয়া আছে</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="warnRetailerName">এই রিটেইলারের একটি অর্ডার পেন্ডিং আছে</p>
+      <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-1.5"><i class="fas fa-exclamation-triangle text-amber-500"></i> অর্ডার পেন্ডিং আছে</h3>
+      <p class="text-xs text-slate-400 font-semibold" id="warnRetailerName">একটি অর্ডার ইতিমধ্যে প্রক্রিয়াধীন আছে</p>
     </div>
-    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
-    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 text-xs font-semibold flex gap-2.5">
-      <i class="fas fa-exclamation-circle text-amber-600 text-sm mt-0.5"></i>
-      <span id="warnText">এই রিটেইলারের একটি অর্ডার ইতিমধ্যে পেন্ডিং আছে। আপনি কি আরেকটি অর্ডার করতে চান?</span>
+    <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-xs font-semibold flex gap-2.5">
+      <i class="fas fa-info-circle text-amber-600 text-base shrink-0 mt-0.5"></i>
+      <span id="warnText">এই রিটেইলারের একটি অর্ডার ইতিমধ্যে পেন্ডিং আছে। আপনি কি নতুন আরেকটি অর্ডার যোগ করতে চান?</span>
     </div>
     <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">চলতি অর্ডারের মালামাল:</div>
-    <div id="existingOrderItems" class="space-y-2.5"></div>
+    <div id="existingOrderItems" class="space-y-2"></div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white flex gap-3 shrink-0">
-    <button onclick="closeAllSheets()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-bold transition-all">বাতিল করুন</button>
+    <button onclick="closeAllSheets()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all">বাতিল</button>
     <button onclick="proceedNewOrder()" class="flex-1 py-3.5 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/25 transition-all">আবার অর্ডার করুন</button>
   </div>
 </div>
 
 <!-- Sheet 3: Ready Sale -->
-<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetReadySale">
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetReadySale">
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
       <h3 class="text-base font-extrabold text-slate-900" id="rsRetailerName">সরাসরি বিক্রি</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="rsRetailerAddr">রিটেইলারের কাছে সরাসরি বিক্রি</p>
+      <p class="text-xs text-slate-400 font-semibold" id="rsRetailerAddr">স্পট ক্যাশ বিক্রি</p>
     </div>
-    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
-    <div class="bg-green-50 rounded-2xl p-4 flex items-center gap-3 border border-green-100">
+    <div class="bg-green-50 rounded-2xl p-3.5 flex items-center gap-3 border border-green-100">
       <div class="w-10 h-10 rounded-xl bg-green-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-bolt"></i></div>
       <div>
         <h4 class="text-sm font-bold text-slate-900 leading-snug" id="rsRName2">রিটেইলারের নাম</h4>
         <p class="text-xs text-slate-400 font-semibold mt-0.5" id="rsRPhone">ফোন</p>
       </div>
     </div>
-    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">পণ্য — পরিমাণ ও দাম</div>
+    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">পণ্য — পরিমাণ ও বিক্রয় মূল্য</div>
     <div class="space-y-3" id="readySaleList">
       <!-- Populated by JS -->
     </div>
-    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
-      <span class="text-lg font-black text-green-600" id="rsTotalVal"><?= $currency ?>0</span>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100 shadow-inner">
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট বিক্রয় টাকা</span>
+      <span class="text-xl font-black text-green-600" id="rsTotalVal"><?= $currency ?>0.00</span>
     </div>
   </div>
   <div class="p-4 border-t border-slate-100 bg-white shrink-0">
-    <button onclick="confirmReadySale()" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-base font-bold shadow-lg shadow-green-600/25 transition-all active:scale-[0.98]">
+    <button onclick="confirmReadySale()" class="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white rounded-2xl text-base font-bold shadow-lg shadow-green-600/25 transition-all active:scale-[0.98]">
       <i class="fas fa-bolt mr-1.5"></i> বিক্রি সম্পন্ন করুন
     </button>
   </div>
 </div>
 
 <!-- Sheet 4: Delivery -->
-<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[80vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetDelivery">
+<div class="bottom-sheet fixed left-0 right-0 bottom-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl z-[400] translate-y-full flex flex-col pb-safe" id="sheetDelivery">
   <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 shrink-0"></div>
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
       <h3 class="text-base font-extrabold text-slate-900" id="delRetailerName">ডেলিভারি</h3>
-      <p class="text-xs text-slate-400 font-semibold" id="delRetailerAddr">ডেলিভারি বাকি আছে</p>
+      <p class="text-xs text-slate-400 font-semibold" id="delRetailerAddr">পেন্ডিং ডেলিভারি ফিলাপ</p>
     </div>
-    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
-    <div class="bg-blue-50 rounded-2xl p-4 flex items-center gap-3 border border-blue-100">
+    <div class="bg-blue-50 rounded-2xl p-3.5 flex items-center gap-3 border border-blue-100">
       <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shrink-0"><i class="fas fa-shipping-fast"></i></div>
       <div>
         <h4 class="text-sm font-bold text-slate-900 leading-snug" id="delRName2">রিটেইলারের নাম</h4>
@@ -297,17 +463,17 @@ $currency = getSetting('currency_symbol', '৳');
     </div>
     <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ডেলিভারি করার মালামাল</div>
     <div class="space-y-2" id="deliveryItemsList"></div>
-    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100">
-      <span class="text-xs font-bold text-slate-500 uppercase">মোট টাকা</span>
-      <span class="text-lg font-black text-slate-900" id="delTotalVal"><?= $currency ?>0</span>
+    <div class="bg-slate-50 rounded-2xl p-4 flex justify-between items-center border border-slate-100 shadow-inner">
+      <span class="text-xs font-bold text-slate-500 uppercase">মোট ডেলিভারি টাকা</span>
+      <span class="text-xl font-black text-blue-600" id="delTotalVal"><?= $currency ?>0.00</span>
     </div>
     <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-2">ডেলিভারি স্ট্যাটাস আপডেট করুন</div>
     <div class="grid grid-cols-2 gap-3">
-      <button class="py-3 bg-green-50 text-green-600 hover:bg-green-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-green-200/50 transition-colors" onclick="updateDelivery('completed')">
-        <i class="fas fa-check-circle"></i> সম্পন্ন
+      <button class="py-3.5 bg-green-50 text-green-700 hover:bg-green-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-green-200 transition-colors active:scale-95" onclick="updateDelivery('completed')">
+        <i class="fas fa-check-circle text-green-600"></i> সম্পন্ন (ক্যাশ)
       </button>
-      <button class="py-3 bg-slate-50 text-slate-500 hover:bg-slate-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-slate-200/50 transition-colors" onclick="updateDelivery('cancelled')">
-        <i class="fas fa-times-circle"></i> বাতিল
+      <button class="py-3.5 bg-slate-50 text-slate-600 hover:bg-slate-100 font-bold text-sm rounded-xl flex items-center justify-center gap-2 border border-slate-200 transition-colors active:scale-95" onclick="updateDelivery('cancelled')">
+        <i class="fas fa-times-circle text-red-500"></i> বাতিল
       </button>
     </div>
   </div>
@@ -319,35 +485,35 @@ $currency = getSetting('currency_symbol', '৳');
   <div class="px-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
     <div>
       <h3 class="text-base font-extrabold text-slate-900">নতুন রিটেইলার</h3>
-      <p class="text-xs text-slate-400 font-semibold">আপনার এলাকায় নতুন রিটেইলার রেজিস্ট্রেশন করুন</p>
+      <p class="text-xs text-slate-400 font-semibold">এলাকার নতুন রিটেইলার তথ্য পিন করুন</p>
     </div>
-    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times"></i></button>
+    <button class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors" onclick="closeAllSheets()"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div class="p-5 flex-1 overflow-y-auto space-y-4">
     <form id="addRetailerForm" onsubmit="submitAddRetailer(event)" class="space-y-4">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">দোকানের নাম (ঐচ্ছিক)</label>
-        <input type="text" id="arShopName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
+        <input type="text" id="arShopName" placeholder="যেমন: ভাই ভাই স্টোর" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">ফোন নাম্বার *</label>
-        <input type="tel" id="arPhone" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
+        <input type="tel" id="arPhone" required placeholder="017xxxxxxxx" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-slate-300">
       </div>
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">রিটেইলারের ছবি (ঐচ্ছিক)</label>
-        <input type="file" id="arImage" accept="image/*" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none transition-all file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/5 file:text-primary hover:file:bg-primary/10">
+        <input type="file" id="arImage" accept="image/*" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none transition-all file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
       </div>
       
       <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">লোকেশন</label>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">জিপিএস লোকেশন *</label>
         <div class="flex gap-2">
-          <input type="text" id="arLat" placeholder="অক্ষাংশ (Lat)" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
-          <input type="text" id="arLng" placeholder="দ্রাঘিমাংশ (Lng)" readonly required class="flex-1 min-w-0 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600">
-          <button type="button" onclick="openLocationPicker()" class="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shrink-0 transition-colors"><i class="fas fa-map-marker-alt"></i></button>
+          <input type="text" id="arLat" placeholder="Lat" readonly required class="flex-1 min-w-0 px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600 font-mono">
+          <input type="text" id="arLng" placeholder="Lng" readonly required class="flex-1 min-w-0 px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none text-slate-600 font-mono">
+          <button type="button" onclick="openLocationPicker()" title="ম্যাপে পিন করুন" class="w-11 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shrink-0 transition-colors shadow-md shadow-blue-600/20"><i class="fas fa-map-marker-alt"></i></button>
         </div>
       </div>
 
-      <button type="submit" id="btnSubmitRetailer" class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-xl text-base font-bold shadow-lg shadow-primary/25 transition-all mt-4">
+      <button type="submit" id="btnSubmitRetailer" class="w-full py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-2xl text-base font-bold shadow-lg shadow-primary/25 transition-all mt-4 active:scale-[0.98]">
         রিটেইলার সেভ করুন
       </button>
     </form>
@@ -358,11 +524,11 @@ $currency = getSetting('currency_symbol', '৳');
 <div id="locationPickerOverlay" class="hidden fixed inset-0 bg-white z-[1000] flex-col">
   <div class="h-14 bg-gradient-to-r from-primary to-primary-light px-4 flex items-center justify-between text-white shadow-md">
     <span class="font-extrabold text-sm">লোকেশন পিন করুন</span>
-    <button onclick="closeLocationPicker()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"><i class="fas fa-times"></i></button>
+    <button onclick="closeLocationPicker()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"><i class="fas fa-times text-xs"></i></button>
   </div>
   <div id="pickerMap" class="flex-1 w-full"></div>
   <div class="p-4 bg-white border-t border-slate-100 shadow-2xl">
-    <button onclick="confirmLocation()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-base font-bold transition-all shadow-lg shadow-green-600/25">
+    <button onclick="confirmLocation()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl text-base font-bold transition-all shadow-lg shadow-green-600/25 active:scale-[0.98]">
       লোকেশন কনফার্ম করুন
     </button>
   </div>
@@ -383,14 +549,14 @@ const MAP_ZOOM  = <?= (int)$mapZoom ?>;
 const BASE_URL  = '<?= BASE_URL ?>';
 
 // ===== STATE =====
-let currentTab    = 'sales';
-let currentSheet  = null;
-let currentRetailer = null;
-let salesMarkers  = [];
-let delivMarkers  = [];
+let currentTab       = 'sales';
+let currentSheet     = null;
+let currentRetailer  = null;
+let salesMarkers     = [];
+let delivMarkers     = [];
 let mapInstance;
-let orderItems    = {}; // productId => {qty, price}
-let readySaleItems= {};
+let orderItems       = {}; // productId => {qty, price}
+let readySaleItems   = {};
 let currentDeliveryId = null;
 let currentOrderId    = null;
 let pendingRetailerId = null;
@@ -398,57 +564,58 @@ let userMarker        = null;
 let userLatLng        = null;
 let radiusCircle      = null;
 let markerClusterGroup = null;
-let forcedRetailerId   = null;
+let forcedRetailerId  = null;
+let maxDistanceFilter = 'all'; // '50', '200', '1000', 'all'
+let activeTileLayer   = 'streets'; // 'streets', 'satellite', 'osm'
 
-// ===== MAP INIT =====
+let tileLayers = {};
 let lastRenderLatLng = null;
 
+// Helper: Bangla digits formatter
+function toBnNum(num) {
+  if (num === null || num === undefined) return '';
+  const bnDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+  return String(num).replace(/[0-9]/g, d => bnDigits[d]);
+}
+
+// ===== MAP INIT =====
 function initMap() {
   mapInstance = L.map('leaflet-map', { 
     preferCanvas: true,
-    zoomControl: false, 
+    zoomControl: true, 
     attributionControl: false,
     fadeAnimation: false,
     zoomAnimation: true,
     markerZoomAnimation: false
   }).setView([MAP_LAT, MAP_LNG], 19);
   
-  // OpenStreetMap Base
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+  // Layer Definitions
+  tileLayers.streets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    updateWhenZooming: false,
+    updateWhenIdle: true
+  });
+
+  tileLayers.satellite = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    updateWhenZooming: false,
+    updateWhenIdle: true
+  });
+
+  tileLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
     maxZoom: 19,
     updateWhenZooming: false,
     updateWhenIdle: true
   });
-  
-  // Google Maps Road Base (uses Google's tile server directly via Leaflet without requiring API keys)
-  const googleStreets = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    updateWhenZooming: false,
-    updateWhenIdle: true
-  });
 
-  const googleHybrid = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    updateWhenZooming: false,
-    updateWhenIdle: true
-  });
-
-  // Load Google Streets as default, OSM as secondary fallback
-  googleStreets.addTo(mapInstance);
-
-  // Add layer controls so the agent can toggle between Leaflet's OpenStreetMap, Google Streets, and Google Satellite Hybrid
-  const baseMaps = {
-    "Google Streets": googleStreets,
-    "Google Satellite": googleHybrid,
-    "OpenStreetMap": osm
-  };
-  L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(mapInstance);
+  // Default to Google Streets
+  tileLayers.streets.addTo(mapInstance);
 
   markerClusterGroup = L.markerClusterGroup({
     disableClusteringAtZoom: 18,
-    maxClusterRadius: 50,
+    maxClusterRadius: 40,
     spiderfyOnMaxZoom: false,
     showCoverageOnHover: false,
     animate: false,
@@ -457,76 +624,130 @@ function initMap() {
   });
   mapInstance.addLayer(markerClusterGroup);
 
-  loadSalesMarkers();
+  let hasInitialRender = false;
 
-  // Track user location with smart throttling for low-end mobile devices
+  const renderInitialMarkers = (lat, lng) => {
+    if (hasInitialRender) return;
+    hasInitialRender = true;
+    if (lat && lng) {
+      userLatLng = L.latLng(lat, lng);
+      mapInstance.setView([lat, lng], 19);
+    }
+    if (currentTab === 'sales') loadSalesMarkers();
+    else loadDelivMarkers();
+  };
+
+  // Fallback timer if GPS takes > 1.2s to acquire
+  const fallbackTimer = setTimeout(() => {
+    if (!hasInitialRender) {
+      renderInitialMarkers(MAP_LAT, MAP_LNG);
+    }
+  }, 1200);
+
+  // Track agent geolocation cleanly without UI jumps
   if ("geolocation" in navigator) {
     navigator.geolocation.watchPosition((pos) => {
+      clearTimeout(fallbackTimer);
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const newLatLng = L.latLng(lat, lng);
 
       if (!userMarker) {
+        userLatLng = newLatLng;
         const userIcon = L.divIcon({
           className: '',
-          html: `<div style="width: 18px; height: 18px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
+          html: `<div style="width: 22px; height: 22px; background-color: #2563eb; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 14px rgba(37,99,235,0.6); animation: pulse 2s infinite;"></div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
           zIndexOffset: 1000
         });
         userMarker = L.marker([lat, lng], {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
-        userMarker.on('click', () => {
-          if (userLatLng) mapInstance.flyTo(userLatLng, 19);
-        });
+        userMarker.on('click', recenterUser);
+        mapInstance.setView(newLatLng, 19);
+        renderInitialMarkers(lat, lng);
       } else {
         userMarker.setLatLng([lat, lng]);
       }
       
       userLatLng = newLatLng;
-      
+
       if (!radiusCircle) {
-        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.15, weight: 2 }).addTo(mapInstance);
-        mapInstance.flyTo(userLatLng, 19);
+        radiusCircle = L.circle(userLatLng, { radius: 50, color: '#8B0032', fillOpacity: 0.12, weight: 1.5 }).addTo(mapInstance);
       } else {
         radiusCircle.setLatLng(userLatLng);
       }
 
-      // Re-render markers only if agent moved significantly (> 3 meters) or first time
+      // Re-render markers smoothly if moved > 3 meters
       if (!lastRenderLatLng || lastRenderLatLng.distanceTo(userLatLng) > 3) {
         lastRenderLatLng = userLatLng;
         if (currentTab === 'sales') loadSalesMarkers();
         else loadDelivMarkers();
       }
     }, (err) => {
-      console.log("Location tracking error", err);
+      console.log("Location tracking notice", err);
+      if (!hasInitialRender) renderInitialMarkers(MAP_LAT, MAP_LNG);
     }, {
       enableHighAccuracy: true,
       maximumAge: 5000,
       timeout: 10000
     });
+  } else {
+    renderInitialMarkers(MAP_LAT, MAP_LNG);
   }
 }
 
+// ===== MAP LAYER SWITCHER =====
+function toggleLayerMenu() {
+  const menu = document.getElementById('layerMenu');
+  menu.classList.toggle('hidden');
+}
+
+function setMapLayer(type) {
+  if (type === activeTileLayer) return;
+  mapInstance.removeLayer(tileLayers[activeTileLayer]);
+  tileLayers[type].addTo(mapInstance);
+  activeTileLayer = type;
+
+  document.getElementById('layerCheckStreets').classList.toggle('hidden', type !== 'streets');
+  document.getElementById('layerCheckSat').classList.toggle('hidden', type !== 'satellite');
+  document.getElementById('layerCheckOsm').classList.toggle('hidden', type !== 'osm');
+  
+  document.getElementById('layerMenu').classList.add('hidden');
+}
+
+function recenterUser() {
+  if (userLatLng) {
+    mapInstance.flyTo(userLatLng, 19, { animate: true, duration: 0.8 });
+  } else {
+    showToast('জিপিএস লোকেশন এখনো পাওয়া যায়নি', 'danger');
+  }
+}
+
+// ===== ICON CREATOR =====
 function makeIcon(color, iconHtml, label) {
   const badgeClass = color === '#6B7280' ? 'bg-slate-800/95 text-white border-slate-700' : (color === '#16A34A' ? 'bg-green-600/95 text-white border-green-500' : 'bg-blue-600/95 text-white border-blue-500');
   return L.divIcon({
     className: '',
     html: `
       <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-        <!-- Floating Label Card -->
-        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 ${badgeClass} text-[9px] font-black rounded-xl shadow-lg shadow-black/15 whitespace-nowrap border select-none z-10 leading-none">
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 ${badgeClass} text-[9px] font-black rounded-xl shadow-md whitespace-nowrap border select-none z-10 leading-none">
           ${label}
         </div>
-        <!-- Little arrow below label -->
         <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-1.5 h-1.5 rotate-45 z-0" style="background-color: ${color}; opacity: 0.95;"></div>
-        <!-- Droplet Pin Icon -->
-        <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid #fff;">
+        <div style="width:36px;height:36px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.35);border:2.5px solid #fff;">
           <span style="transform:rotate(45deg);font-size:13px;color:#fff;display:flex;align-items:center;justify-content:center;">${iconHtml}</span>
         </div>
       </div>
     `,
     iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36]
   });
+}
+
+// Distance checker
+function isWithin50mRadius(r) {
+  if (r.id == forcedRetailerId) return true;
+  const centerPos = userLatLng || L.latLng(MAP_LAT, MAP_LNG);
+  return centerPos.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) <= 50;
 }
 
 // ===== SALES MARKERS =====
@@ -537,8 +758,7 @@ function loadSalesMarkers() {
   salesMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
-    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
+    if (!isWithin50mRadius(r)) return;
     
     const hasOrder = parseInt(r.has_order) > 0;
     const color = hasOrder ? '#16A34A' : '#6B7280';
@@ -546,6 +766,7 @@ function loadSalesMarkers() {
     const label = r.shop_name ? r.shop_name : r.name;
     const icon = makeIcon(color, iconHtml, label);
     const marker = L.marker([r.lat, r.lng], {icon});
+    
     marker.on('click', () => {
       if (hasOrder) openOrderWarning(r);
       else openNewOrder(r);
@@ -563,8 +784,7 @@ function loadDelivMarkers() {
   delivMarkers = [];
   RETAILERS.forEach(r => {
     if (!r.lat || !r.lng) return;
-    if (!userLatLng && r.id != forcedRetailerId) return; // STRICT 50m: Don't load if no GPS yet
-    if (userLatLng && r.id != forcedRetailerId && userLatLng.distanceTo(L.latLng(parseFloat(r.lat), parseFloat(r.lng))) > 50) return;
+    if (!isWithin50mRadius(r)) return;
     
     const hasDelivery = parseInt(r.has_delivery) > 0;
     const color = hasDelivery ? '#2563EB' : '#6B7280';
@@ -572,6 +792,7 @@ function loadDelivMarkers() {
     const label = r.shop_name ? r.shop_name : r.name;
     const icon = makeIcon(color, iconHtml, label);
     const marker = L.marker([r.lat, r.lng], {icon});
+    
     marker.on('click', () => {
       if (hasDelivery) openDelivery(r);
       else openReadySale(r);
@@ -581,7 +802,71 @@ function loadDelivMarkers() {
   });
 }
 
+// ===== RETAILER HUB SHEET =====
+function openRetailerHub(r) {
+  currentRetailer = r;
+  document.getElementById('hubRetailerName').textContent = r.name;
+  document.getElementById('hubShopName').textContent = r.shop_name ? `দোকান: ${r.shop_name}` : 'সাধারণ রিটেইলার';
+  document.getElementById('hubPhone').textContent = r.phone || 'ফোন নেই';
+  document.getElementById('hubAddress').textContent = r.address || r.area || 'ঠিকানা যোগ করা হয়নি';
 
+  // Call Link
+  const callBtn = document.getElementById('btnHubCall');
+  if (r.phone) {
+    callBtn.href = `tel:${r.phone}`;
+    callBtn.classList.remove('opacity-50', 'pointer-events-none');
+  } else {
+    callBtn.href = '#';
+    callBtn.classList.add('opacity-50', 'pointer-events-none');
+  }
+
+  // Google Maps Direction Link
+  const navBtn = document.getElementById('btnHubNav');
+  if (r.lat && r.lng) {
+    navBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}`;
+    navBtn.classList.remove('opacity-50', 'pointer-events-none');
+  } else {
+    navBtn.href = '#';
+    navBtn.classList.add('opacity-50', 'pointer-events-none');
+  }
+
+  // Status Pills
+  const pillsContainer = document.getElementById('hubStatusPills');
+  pillsContainer.innerHTML = '';
+  
+  const hasOrder = parseInt(r.has_order) > 0;
+  const hasDelivery = parseInt(r.has_delivery) > 0;
+
+  if (hasOrder) {
+    pillsContainer.innerHTML += `<span class="px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-extrabold flex items-center gap-1.5"><i class="fas fa-clipboard-check"></i> পেন্ডিং অর্ডার আছে</span>`;
+  } else {
+    pillsContainer.innerHTML += `<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold flex items-center gap-1.5"><i class="fas fa-minus-circle"></i> নতুন অর্ডার নেই</span>`;
+  }
+
+  if (hasDelivery) {
+    pillsContainer.innerHTML += `<span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-extrabold flex items-center gap-1.5"><i class="fas fa-shipping-fast"></i> ডেলিভারি বাকি</span>`;
+  }
+
+  openSheet('sheetRetailerHub');
+}
+
+function triggerHubAction(action) {
+  if (!currentRetailer) return;
+  const r = currentRetailer;
+  closeAllSheets(false);
+
+  setTimeout(() => {
+    if (action === 'order') {
+      if (parseInt(r.has_order) > 0) openOrderWarning(r);
+      else openNewOrder(r);
+    } else if (action === 'ready_sale') {
+      openReadySale(r);
+    } else if (action === 'delivery') {
+      if (parseInt(r.has_delivery) > 0) openDelivery(r);
+      else openReadySale(r);
+    }
+  }, 200);
+}
 
 // ===== MAP SEARCH =====
 function handleMapSearch(query) {
@@ -595,16 +880,36 @@ function handleMapSearch(query) {
   
   clearBtn.classList.remove('hidden');
   const q = query.toLowerCase();
-  const matched = RETAILERS.filter(r => (r.name && r.name.toLowerCase().includes(q)) || (r.phone && r.phone.includes(q))).slice(0, 10);
+  const matched = RETAILERS.filter(r => 
+    (r.name && r.name.toLowerCase().includes(q)) || 
+    (r.shop_name && r.shop_name.toLowerCase().includes(q)) || 
+    (r.phone && r.phone.includes(q))
+  ).slice(0, 8);
   
   container.innerHTML = '';
   if (matched.length === 0) {
-    container.innerHTML = '<div class="p-3 text-xs text-center font-bold text-slate-400">কোনো রিটেইলার পাওয়া যায়নি</div>';
+    container.innerHTML = '<div class="p-3.5 text-xs text-center font-bold text-slate-400">কোনো রিটেইলার পাওয়া যায়নি</div>';
   } else {
     matched.forEach(r => {
       const div = document.createElement('div');
-      div.className = 'p-3 border-b border-slate-100 last:border-0 hover:bg-primary/5 cursor-pointer transition-colors flex items-center gap-2';
-      div.innerHTML = `<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0"><i class="fas fa-store"></i></div><div><div class="font-bold text-sm text-slate-800">${r.name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5"><i class="fas fa-phone-alt"></i> ${r.phone || 'N/A'}</div></div>`;
+      div.className = 'p-3 border-b border-slate-100 last:border-0 hover:bg-primary/5 cursor-pointer transition-colors flex items-center justify-between gap-2';
+      
+      const hasOrder = parseInt(r.has_order) > 0;
+      const hasDeliv = parseInt(r.has_delivery) > 0;
+      let badgeHtml = '';
+      if (hasOrder) badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-black">অর্ডার আছে</span>`;
+      else if (hasDeliv) badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-black">ডেলিভারি باقی</span>`;
+
+      div.innerHTML = `
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold"><i class="fas fa-store text-xs"></i></div>
+          <div class="min-w-0">
+            <div class="font-extrabold text-xs text-slate-800 truncate">${r.name} ${r.shop_name ? `(${r.shop_name})` : ''}</div>
+            <div class="text-[10px] text-slate-400 font-semibold mt-0.5 truncate"><i class="fas fa-phone-alt text-[9px]"></i> ${r.phone || 'N/A'}</div>
+          </div>
+        </div>
+        ${badgeHtml}
+      `;
       div.onclick = () => focusRetailerOnMap(r);
       container.appendChild(div);
     });
@@ -623,7 +928,7 @@ function clearMapSearch() {
 
 function focusRetailerOnMap(r) {
   if (!r.lat || !r.lng) {
-    alert("এই রিটেইলারের কোনো ম্যাপ লোকেশন নেই!");
+    showToast("এই রিটেইলারের কোনো ম্যাপ লোকেশন নেই!", 'danger');
     return;
   }
   
@@ -633,30 +938,48 @@ function focusRetailerOnMap(r) {
   if (currentTab === 'sales') loadSalesMarkers();
   else loadDelivMarkers();
   
-  mapInstance.flyTo([r.lat, r.lng], 19, { animate: true, duration: 1.5 });
+  mapInstance.flyTo([r.lat, r.lng], 19, { animate: true, duration: 1.2 });
+  setTimeout(() => {
+    if (currentTab === 'sales') {
+      if (parseInt(r.has_order) > 0) openOrderWarning(r);
+      else openNewOrder(r);
+    } else {
+      if (parseInt(r.has_delivery) > 0) openDelivery(r);
+      else openReadySale(r);
+    }
+  }, 1300);
 }
 
 // ===== TAB SWITCH =====
 function switchTab(tab) {
   if (tab === currentTab) return;
   
-  const icon = tab === 'sales' ? document.querySelector('#tabSales i') : document.querySelector('#tabDelivery i');
-  const ogClass = icon.className;
-  icon.className = 'fas fa-spinner fa-spin';
-
+  const tabSales = document.getElementById('tabSales');
+  const tabDelivery = document.getElementById('tabDelivery');
+  
   fetch(BASE_URL + '/api/agent_retailers.php')
     .then(r => r.json())
     .then(data => {
-      icon.className = ogClass;
       if (data.success) {
         RETAILERS = data.retailers;
+        updateHeaderBadges();
       }
       executeTabSwitch(tab);
     })
-    .catch(() => {
-      icon.className = ogClass;
-      executeTabSwitch(tab);
-    });
+    .catch(() => executeTabSwitch(tab));
+}
+
+function updateHeaderBadges() {
+  const ordersCount = RETAILERS.filter(r => parseInt(r.has_order) > 0).length;
+  const delivCount = RETAILERS.filter(r => parseInt(r.has_delivery) > 0).length;
+  
+  const bSales = document.getElementById('badgeSalesCount');
+  const bDeliv = document.getElementById('badgeDelivCount');
+  const hBadge = document.getElementById('headerOrderBadge');
+  
+  if (bSales) bSales.textContent = ordersCount;
+  if (bDeliv) bDeliv.textContent = delivCount;
+  if (hBadge) hBadge.textContent = ordersCount;
 }
 
 function executeTabSwitch(tab) {
@@ -667,11 +990,11 @@ function executeTabSwitch(tab) {
   const tabDelivery = document.getElementById('tabDelivery');
   
   if (tab === 'sales') {
-    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
-    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
+    tabSales.className = "flex-1 flex items-center justify-center gap-2 text-xs font-black text-primary border-b-2 border-primary transition-all";
+    tabDelivery.className = "flex-1 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-primary border-b-2 border-transparent transition-all";
   } else {
-    tabSales.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-slate-400 hover:text-primary transition-all border-b-2 border-transparent";
-    tabDelivery.className = "flex-1 flex flex-col items-center justify-center text-[11px] font-bold text-primary transition-all border-b-2 border-primary";
+    tabSales.className = "flex-1 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-primary border-b-2 border-transparent transition-all";
+    tabDelivery.className = "flex-1 flex items-center justify-center gap-2 text-xs font-black text-primary border-b-2 border-primary transition-all";
   }
   
   document.getElementById('tabLabel').textContent = tab === 'sales' ? 'বিক্রি মোড' : 'ডেলিভারি মোড';
@@ -681,15 +1004,11 @@ function executeTabSwitch(tab) {
   if (tab === 'sales') {
     legendSales.classList.remove('hidden');
     legendDelivery.classList.add('hidden');
-  } else {
-    legendSales.classList.add('hidden');
-    legendDelivery.classList.remove('hidden');
-  }
-
-  if (tab === 'sales') {
     delivMarkers = [];
     loadSalesMarkers();
   } else {
+    legendSales.classList.add('hidden');
+    legendDelivery.classList.remove('hidden');
     salesMarkers = [];
     loadDelivMarkers();
   }
@@ -704,8 +1023,9 @@ function openSheet(id) {
 }
 
 function closeAllSheets(removeOverlay = true) {
-  ['sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery','sheetAddRetailer'].forEach(s => {
-    document.getElementById(s).classList.remove('open');
+  ['sheetRetailerHub','sheetNewOrder','sheetOrderWarning','sheetReadySale','sheetDelivery','sheetAddRetailer'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.remove('open');
   });
   if (removeOverlay) document.getElementById('bsOverlay').classList.remove('active');
   currentSheet = null;
@@ -729,32 +1049,42 @@ function renderProductList() {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const item = document.createElement('div');
-    item.className = 'flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-3';
+    item.className = 'flex flex-col gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm mb-3';
     item.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
+        <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
           <i class="fas fa-egg"></i>
         </div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-extrabold text-slate-800 truncate">${p.name}</div>
-          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">কেনার মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toLocaleString()} / ${p.unit_type}</div>
+          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ক্রয়মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toFixed(2)} / ${p.unit_type}</div>
         </div>
       </div>
       
-      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-50">
+      <!-- Quick Preset Quantity Chips -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+        <span class="text-[10px] font-bold text-slate-400 shrink-0">দ্রুত পরিমাণ:</span>
+        <button type="button" onclick="addQty(${p.id}, 10)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+10</button>
+        <button type="button" onclick="addQty(${p.id}, 50)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+50</button>
+        <button type="button" onclick="addQty(${p.id}, 100)" class="px-2 py-0.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-extrabold text-xs transition-colors">+100</button>
+        <button type="button" onclick="addQty(${p.id}, 500)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+500</button>
+        <button type="button" onclick="addQty(${p.id}, 1000)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+1000</button>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
         <!-- Price Input -->
         <div class="flex-1 relative">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
           <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
                  id="price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updatePrice(${p.id})">
-          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
+          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
         </div>
         
         <!-- Qty Input -->
-        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeQty(${p.id}, -1)">−</button>
-          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id})">
-          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeQty(${p.id}, 1)">+</button>
+        <div class="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl shrink-0 w-36 border border-slate-200/80 shadow-inner">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-base shadow-sm flex items-center justify-center active:scale-75 hover:text-primary transition-all select-none" onclick="changeQty(${p.id}, -1)">−</button>
+          <input class="flex-1 text-center text-sm font-black text-primary bg-transparent outline-none w-full" id="qty_${p.id}" value="0" min="0" oninput="updateTotal(${p.id})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-primary text-white font-black text-base shadow-sm flex items-center justify-center active:scale-75 transition-all select-none" onclick="changeQty(${p.id}, 1)">+</button>
         </div>
       </div>`;
     container.appendChild(item);
@@ -762,65 +1092,50 @@ function renderProductList() {
   updateOrderTotal();
 }
 
+function addQty(productId, amount) {
+  const qtyInput = document.getElementById('qty_' + productId);
+  if (!qtyInput) return;
+  let val = parseInt(qtyInput.value || '0') + amount;
+  if (val < 0) val = 0;
+  qtyInput.value = val;
+  updateTotal(productId);
+}
+
 function changeQty(productId, delta) {
   const qtyInput = document.getElementById('qty_' + productId);
-  const priceInput = document.getElementById('price_' + productId);
-  let price = parseFloat(priceInput.value || '0');
-  const prod = PRODUCTS.find(p => p.id == productId);
-  const bp = parseFloat(prod.buying_price || 0);
-  
   let val = parseInt(qtyInput.value || '0') + delta;
   if (val < 0) val = 0;
   qtyInput.value = val;
-  
-  if (val > 0) orderItems[productId] = {qty: val, price: price};
-  else delete orderItems[productId];
-  updateOrderTotal();
+  updateTotal(productId);
 }
 
 function updatePrice(productId) {
-  const qtyInput = document.getElementById('qty_' + productId);
-  const priceInput = document.getElementById('price_' + productId);
-  const qty = parseInt(qtyInput.value || '0');
-  let price = parseFloat(priceInput.value || '0');
-  
-  const prod = PRODUCTS.find(p => p.id == productId);
-  const bp = parseFloat(prod.buying_price || 0);
-  
-  if (qty > 0) {
-    orderItems[productId] = {qty: qty, price: price};
-    updateOrderTotal();
-  }
+  updateTotal(productId);
 }
 
 function updateTotal(productId) {
   const qtyInput = document.getElementById('qty_' + productId);
   const priceInput = document.getElementById('price_' + productId);
+  if (!qtyInput || !priceInput) return;
+
   const qty = parseInt(qtyInput.value || '0');
-  let price = parseFloat(priceInput.value || '0');
-  
-  const prod = PRODUCTS.find(p => p.id == productId);
-  const bp = parseFloat(prod.buying_price || 0);
+  const price = parseFloat(priceInput.value || '0');
   
   if (qty > 0) orderItems[productId] = {qty: qty, price: price};
   else delete orderItems[productId];
+  
   updateOrderTotal();
 }
 
 function updateOrderTotal() {
   let total = 0;
   Object.values(orderItems).forEach(i => total += i.qty * i.price);
-  document.getElementById('orderTotalVal').textContent = CURRENCY + total.toLocaleString('en', {minimumFractionDigits:2});
+  document.getElementById('orderTotalVal').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
 function placeOrder() {
-  const items = Object.entries(orderItems).map(([pid, item]) => {
-    const prod = PRODUCTS.find(p => p.id == pid);
-    const bp = parseFloat(prod.buying_price || 0);
-    const finalPrice = item.price;
-    return {product_id: pid, qty: item.qty, price: finalPrice};
-  });
-  if (items.length === 0) { alert('অনুগ্রহ করে অন্তত একটি পণ্য সিলেক্ট করুন।'); return; }
+  const items = Object.entries(orderItems).map(([pid, item]) => ({product_id: pid, qty: item.qty, price: item.price}));
+  if (items.length === 0) { showToast('অনুগ্রহ করে অন্তত একটি পণ্য সিলেক্ট করুন।', 'danger'); return; }
 
   const btn = document.getElementById('btnPlaceOrder');
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> অর্ডার প্লেস হচ্ছে...';
@@ -835,26 +1150,28 @@ function placeOrder() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('অর্ডার সফলভাবে সম্পন্ন হয়েছে!', 'success');
-      // Update retailer in array
+      showToast('অর্ডার সফলভাবে কনফার্ম হয়েছে!', 'success');
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r) { r.has_order = 1; r.order_id = data.order_id; }
+      updateHeaderBadges();
       loadSalesMarkers();
     } else {
-      alert('ত্রুটি: ' + (data.message || 'অর্ডার করতে ব্যর্থ হয়েছে'));
+      showToast('ত্রুটি: ' + (data.message || 'অর্ডার করতে ব্যর্থ হয়েছে'), 'danger');
     }
   })
-  .catch(() => alert('নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।'))
-  .finally(() => { btn.innerHTML = '<i class="fas fa-clipboard-list mr-1.5"></i> অর্ডার কনফার্ম করুন'; btn.disabled = false; });
+  .catch(() => showToast('নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।', 'danger'))
+  .finally(() => { 
+    btn.innerHTML = '<i class="fas fa-clipboard-check mr-1.5"></i> অর্ডার কনফার্ম করুন'; 
+    btn.disabled = false; 
+  });
 }
 
 // ===== ORDER WARNING =====
 function openOrderWarning(retailer) {
   currentRetailer = retailer;
-  document.getElementById('warnRetailerName').textContent = retailer.name + ' — চলতি অর্ডার';
-  document.getElementById('warnText').textContent = `${retailer.name} এর একটি পেন্ডিং অর্ডার ইতিমধ্যে আছে। আপনি কি আরেকটি অর্ডার করতে চান?`;
+  document.getElementById('warnRetailerName').textContent = retailer.name + ' — পেন্ডিং অর্ডার আছে';
+  document.getElementById('warnText').textContent = `${retailer.name} এর একটি পেন্ডিং অর্ডার ইতিমধ্যে রয়েছে। আপনি কি আরেকটি নতুন অর্ডার তৈরি করতে চান?`;
 
-  // Fetch existing order items
   fetch(BASE_URL + '/api/orders.php?action=get_items&order_id=' + retailer.order_id)
   .then(r => r.json())
   .then(data => {
@@ -863,7 +1180,7 @@ function openOrderWarning(retailer) {
     if (data.items) {
       data.items.forEach(item => {
         const d = document.createElement('div');
-        d.className = 'flex justify-between items-center text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100';
+        d.className = 'flex justify-between items-center text-xs bg-slate-50 p-3 rounded-xl border border-slate-100';
         d.innerHTML = `<div><div class="font-bold text-slate-800">${item.product_name}</div><div class="text-[10px] text-slate-400 font-semibold mt-0.5">পরিমাণ: ${parseInt(item.qty||0)} ${item.unit_type}</div></div><div class="font-black text-slate-700">${CURRENCY}${(item.qty * item.price).toLocaleString()}</div>`;
         container.appendChild(d);
       });
@@ -874,11 +1191,11 @@ function openOrderWarning(retailer) {
 }
 
 function proceedNewOrder() {
-  closeAllSheets();
-  setTimeout(() => openNewOrder(currentRetailer), 350);
+  closeAllSheets(false);
+  setTimeout(() => openNewOrder(currentRetailer), 250);
 }
 
-// ===== READY SALE =====
+// ===== READY SALE (SPOT SALE) =====
 function openReadySale(retailer) {
   currentRetailer = retailer;
   readySaleItems = {};
@@ -891,32 +1208,42 @@ function openReadySale(retailer) {
   container.innerHTML = '';
   PRODUCTS.forEach(p => {
     const d = document.createElement('div');
-    d.className = 'flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-3';
+    d.className = 'flex flex-col gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm mb-3';
     d.innerHTML = `
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg shrink-0">
-          <i class="fas fa-egg"></i>
+        <div class="w-10 h-10 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-lg shrink-0">
+          <i class="fas fa-bolt"></i>
         </div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-extrabold text-slate-800 truncate">${p.name}</div>
-          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">কেনার মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toLocaleString()} / ${p.unit_type}</div>
+          <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ক্রয়মূল্য: ${CURRENCY}${parseFloat(p.buying_price || p.price).toFixed(2)} / ${p.unit_type}</div>
         </div>
       </div>
       
-      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-50">
+      <!-- Quick Preset Quantity Chips -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+        <span class="text-[10px] font-bold text-slate-400 shrink-0">দ্রুত পরিমাণ:</span>
+        <button type="button" onclick="addRSQty(${p.id}, 10)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+10</button>
+        <button type="button" onclick="addRSQty(${p.id}, 50)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+50</button>
+        <button type="button" onclick="addRSQty(${p.id}, 100)" class="px-2 py-0.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 font-extrabold text-xs transition-colors">+100</button>
+        <button type="button" onclick="addRSQty(${p.id}, 500)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+500</button>
+        <button type="button" onclick="addRSQty(${p.id}, 1000)" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">+1000</button>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
         <!-- Price Input -->
         <div class="flex-1 relative">
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">${CURRENCY}</span>
-          <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center" 
+          <input class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-600/20 transition-all text-center" 
                  id="rs_price_${p.id}" value="${p.price}" type="number" step="0.01" min="0" oninput="updateRSTotal(${p.id})">
-          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
+          <div class="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">বিক্রয় মূল্য</div>
         </div>
         
         <!-- Qty Input -->
-        <div class="flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl shrink-0 w-32 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-lg shadow-[0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center active:scale-75 active:shadow-none hover:text-primary transition-all select-none" onclick="changeRSQty(${p.id}, -1, ${p.price})">−</button>
-          <input class="flex-1 text-center text-base font-black text-primary bg-transparent outline-none w-full" id="rs_qty_${p.id}" value="0" min="0" oninput="updateRSTotal(${p.id}, ${p.price})">
-          <button type="button" class="w-8 h-8 rounded-xl bg-gradient-to-b from-primary-light to-primary text-white font-black text-lg shadow-[0_4px_10px_rgba(139,0,50,0.3)] flex items-center justify-center active:scale-75 active:shadow-none transition-all select-none border border-primary-dark" onclick="changeRSQty(${p.id}, 1, ${p.price})">+</button>
+        <div class="flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl shrink-0 w-36 border border-slate-200/80 shadow-inner">
+          <button type="button" class="w-8 h-8 rounded-xl bg-white text-slate-700 font-black text-base shadow-sm flex items-center justify-center active:scale-75 hover:text-green-600 transition-all select-none" onclick="changeRSQty(${p.id}, -1)">−</button>
+          <input class="flex-1 text-center text-sm font-black text-green-600 bg-transparent outline-none w-full" id="rs_qty_${p.id}" value="0" min="0" oninput="updateRSTotal(${p.id})">
+          <button type="button" class="w-8 h-8 rounded-xl bg-green-600 text-white font-black text-base shadow-sm flex items-center justify-center active:scale-75 transition-all select-none" onclick="changeRSQty(${p.id}, 1)">+</button>
         </div>
       </div>`;
     container.appendChild(d);
@@ -925,32 +1252,47 @@ function openReadySale(retailer) {
   openSheet('sheetReadySale');
 }
 
-function updateRSTotal(productId, defaultPrice) {
-  const qty = parseFloat(document.getElementById('rs_qty_' + productId)?.value || '0');
-  const price = parseFloat(document.getElementById('rs_price_' + productId)?.value || defaultPrice || '0');
-  if (qty > 0) readySaleItems[productId] = {qty, price};
-  else delete readySaleItems[productId];
-  updateRSTotalDisplay();
+function addRSQty(productId, amount) {
+  const qtyInput = document.getElementById('rs_qty_' + productId);
+  if (!qtyInput) return;
+  let val = parseInt(qtyInput.value || '0') + amount;
+  if (val < 0) val = 0;
+  qtyInput.value = val;
+  updateRSTotal(productId);
 }
 
-function changeRSQty(productId, delta, defaultPrice) {
+function changeRSQty(productId, delta) {
   const qtyInput = document.getElementById('rs_qty_' + productId);
+  if (!qtyInput) return;
   let val = parseInt(qtyInput.value || '0') + delta;
   if (val < 0) val = 0;
   qtyInput.value = val;
-  updateRSTotal(productId, defaultPrice);
+  updateRSTotal(productId);
 }
 
-// ===== READY SALE TOTAL =====
+function updateRSTotal(productId) {
+  const qtyInput = document.getElementById('rs_qty_' + productId);
+  const priceInput = document.getElementById('rs_price_' + productId);
+  if (!qtyInput || !priceInput) return;
+
+  const qty = parseFloat(qtyInput.value || '0');
+  const price = parseFloat(priceInput.value || '0');
+
+  if (qty > 0) readySaleItems[productId] = {qty, price};
+  else delete readySaleItems[productId];
+
+  updateRSTotalDisplay();
+}
+
 function updateRSTotalDisplay() {
   let total = 0;
   Object.values(readySaleItems).forEach(i => total += i.qty * i.price);
-  document.getElementById('rsTotalVal').textContent = CURRENCY + total.toLocaleString('en', {minimumFractionDigits:2});
+  document.getElementById('rsTotalVal').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
 function confirmReadySale() {
   const items = Object.entries(readySaleItems).map(([pid, i]) => ({product_id: pid, qty: i.qty, price: i.price}));
-  if (items.length === 0) { alert('অনুগ্রহ করে পণ্যের পরিমাণ দিন।'); return; }
+  if (items.length === 0) { showToast('অনুগ্রহ করে পণ্যের পরিমাণ দিন।', 'danger'); return; }
 
   fetch(BASE_URL + '/api/deliveries.php', {
     method: 'POST',
@@ -961,24 +1303,23 @@ function confirmReadySale() {
   .then(data => {
     if (data.success) {
       closeAllSheets();
-      showToast('বিক্রি সম্পন্ন হয়েছে!', 'success');
+      showToast('বিক্রি সফলভাবে সম্পন্ন হয়েছে!', 'success');
     } else {
-      alert('ত্রুটি: ' + (data.message || 'ব্যর্থ হয়েছে'));
+      showToast('ত্রুটি: ' + (data.message || 'ব্যর্থ হয়েছে'), 'danger');
     }
   })
-  .catch(() => alert('নেটওয়ার্ক সমস্যা।'));
+  .catch(() => showToast('নেটওয়ার্ক সমস্যা।', 'danger'));
 }
 
 // ===== DELIVERY =====
 function openDelivery(retailer) {
   currentRetailer = retailer;
   currentDeliveryId = retailer.delivery_id;
-  document.getElementById('delRetailerName').textContent = retailer.name + ' কে ডেলিভারি করুন';
+  document.getElementById('delRetailerName').textContent = retailer.name + ' — ডেলিভারি';
   document.getElementById('delRetailerAddr').textContent = retailer.address || '';
   document.getElementById('delRName2').textContent = retailer.name;
   document.getElementById('delRPhone').textContent = retailer.phone || '';
 
-  // Fetch delivery items
   fetch(BASE_URL + '/api/deliveries.php?action=get_items&delivery_id=' + retailer.delivery_id)
   .then(r => r.json())
   .then(data => {
@@ -992,9 +1333,9 @@ function openDelivery(retailer) {
         const amt = item.qty * item.price;
         total += amt;
         const amtEl = document.getElementById('deliv_amt_' + index);
-        if (amtEl) amtEl.textContent = CURRENCY + amt.toLocaleString('en', {minimumFractionDigits:2});
+        if (amtEl) amtEl.textContent = CURRENCY + amt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
       });
-      document.getElementById('delTotalVal').textContent = CURRENCY + total.toLocaleString('en', {minimumFractionDigits:2});
+      document.getElementById('delTotalVal').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
     };
 
     window.updateDelivItem = (index, field, val) => {
@@ -1006,21 +1347,21 @@ function openDelivery(retailer) {
       data.items.forEach((item, index) => {
         const amt = item.qty * item.price;
         const d = document.createElement('div');
-        d.className = 'flex flex-col gap-2 bg-white p-3 rounded-xl border border-slate-200 shadow-sm';
+        d.className = 'flex flex-col gap-2 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm';
         d.innerHTML = `
           <div class="flex justify-between items-start">
-            <div class="font-bold text-slate-800 text-sm">${item.product_name}</div>
-            <div class="font-black text-primary text-sm" id="deliv_amt_${index}">${CURRENCY}${amt.toLocaleString('en', {minimumFractionDigits:2})}</div>
+            <div class="font-extrabold text-slate-800 text-sm">${item.product_name}</div>
+            <div class="font-black text-blue-600 text-sm" id="deliv_amt_${index}">${CURRENCY}${amt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
           </div>
           <div class="flex items-center gap-2 mt-1">
-            <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <div class="flex-1 flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden focus-within:border-blue-600 transition-all">
               <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">পরিমাণ</div>
-              <input type="number" step="1" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${parseInt(item.qty||0)}" oninput="updateDelivItem(${index}, 'qty', this.value)">
+              <input type="number" step="1" min="0" class="w-full px-2 py-2 text-xs font-black text-center outline-none bg-transparent text-slate-800" value="${parseInt(item.qty||0)}" oninput="updateDelivItem(${index}, 'qty', this.value)">
               <div class="px-2 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-l border-slate-200">${item.unit_type}</div>
             </div>
-            <div class="flex-1 flex items-center bg-slate-50 rounded-lg border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <div class="flex-1 flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden focus-within:border-blue-600 transition-all">
               <div class="px-2.5 py-2 text-[10px] font-bold text-slate-500 bg-slate-100 border-r border-slate-200">দাম</div>
-              <input type="number" step="0.01" min="0" class="w-full px-2 py-2 text-xs font-bold text-center outline-none bg-transparent text-slate-700 en-digit" value="${item.price}" oninput="updateDelivItem(${index}, 'price', this.value)">
+              <input type="number" step="0.01" min="0" class="w-full px-2 py-2 text-xs font-black text-center outline-none bg-transparent text-slate-800" value="${item.price}" oninput="updateDelivItem(${index}, 'price', this.value)">
             </div>
           </div>
         `;
@@ -1051,28 +1392,32 @@ function updateDelivery(status) {
       closeAllSheets();
       let statusBn = 'সম্পন্ন';
       if (status === 'cancelled') statusBn = 'বাতিল';
-      else if (status === 'due') statusBn = 'বকেয়া';
-      else if (status === 'partial') statusBn = 'আংশিক';
-      showToast(`ডেলিভারি ${statusBn} হিসেবে চিহ্নিত করা হয়েছে!`, 'success');
+      showToast(`ডেলিভারি ${statusBn} হয়েছে!`, 'success');
       const r = RETAILERS.find(x => x.id == currentRetailer.id);
       if (r && (status === 'completed' || status === 'cancelled')) r.has_delivery = 0;
+      updateHeaderBadges();
       loadDelivMarkers();
     } else {
-      alert('ত্রুটি: ' + (data.message || 'আপডেট করা যায়নি'));
+      showToast('ত্রুটি: ' + (data.message || 'আপডেট করা যায়নি'), 'danger');
     }
   })
-  .catch(() => alert('নেটওয়ার্ক সমস্যা।'));
+  .catch(() => showToast('নেটওয়ার্ক সমস্যা।', 'danger'));
 }
 
-// ===== TOAST =====
+// ===== TOAST NOTIFICATION =====
 function showToast(msg, type = 'success') {
+  const existing = document.getElementById('appToast');
+  if (existing) existing.remove();
+
   const t = document.createElement('div');
-  t.className = `fixed bottom-20 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-full text-xs font-bold z-[1000] shadow-xl whitespace-nowrap transition-all duration-300 ${type==='success'?'bg-green-600':'bg-red-600'}`;
-  t.innerHTML = `${type==='success'?'<i class="fas fa-check-circle mr-1"></i>':'<i class="fas fa-times-circle mr-1"></i>'} ${msg}`;
+  t.id = 'appToast';
+  t.className = `fixed bottom-20 left-1/2 -translate-x-1/2 text-white px-5 py-3 rounded-2xl text-xs font-extrabold z-[1000] shadow-2xl whitespace-nowrap transition-all duration-300 flex items-center gap-2 ${type==='success'?'bg-green-600':'bg-red-600'}`;
+  t.innerHTML = `${type==='success'?'<i class="fas fa-check-circle text-base"></i>':'<i class="fas fa-exclamation-circle text-base"></i>'} <span>${msg}</span>`;
   document.body.appendChild(t);
+  
   setTimeout(() => {
-    t.classList.add('opacity-0');
-    setTimeout(() => t.remove(), 300);
+    t.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => t.remove(), 350);
   }, 2500);
 }
 
@@ -1087,7 +1432,6 @@ let pickerMarker = null;
 function openAddRetailerSheet() {
   document.getElementById('addRetailerForm').reset();
   
-  // Set current location if available
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition((pos) => {
       document.getElementById('arLat').value = pos.coords.latitude;
@@ -1111,14 +1455,14 @@ function openLocationPicker() {
   } else if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition((pos) => {
       if(pickerMapInstance) {
-        pickerMapInstance.setView([pos.coords.latitude, pos.coords.longitude], 15);
+        pickerMapInstance.setView([pos.coords.latitude, pos.coords.longitude], 17);
         if(pickerMarker) pickerMarker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
       }
     }, () => {});
   }
 
   if (!pickerMapInstance) {
-    pickerMapInstance = L.map('pickerMap', { zoomControl: true, attributionControl: false }).setView([initialLat, initialLng], 15);
+    pickerMapInstance = L.map('pickerMap', { zoomControl: true, attributionControl: false }).setView([initialLat, initialLng], 17);
     L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
       maxZoom: 20,
       subdomains: ['mt0','mt1','mt2','mt3']
@@ -1130,10 +1474,9 @@ function openLocationPicker() {
       pickerMarker.setLatLng(e.latlng);
     });
     
-    // Invalidate size after a short delay since display changed to flex
     setTimeout(() => { pickerMapInstance.invalidateSize(); }, 200);
   } else {
-    pickerMapInstance.setView([initialLat, initialLng], 15);
+    pickerMapInstance.setView([initialLat, initialLng], 17);
     pickerMarker.setLatLng([initialLat, initialLng]);
     setTimeout(() => { pickerMapInstance.invalidateSize(); }, 200);
   }
@@ -1164,7 +1507,7 @@ function submitAddRetailer(e) {
   const imageFile = document.getElementById('arImage').files[0];
   
   if (!lat || !lng) {
-    alert("ম্যাপ থেকে দয়া করে একটি লোকেশন সিলেক্ট করুন।");
+    showToast("ম্যাপ থেকে লোকেশন পিন করুন।", 'danger');
     return;
   }
   
@@ -1180,7 +1523,7 @@ function submitAddRetailer(e) {
   
   const btn = document.getElementById('btnSubmitRetailer');
   const ogText = btn.innerHTML;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Saving...';
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> সেভ হচ্ছে...';
   btn.disabled = true;
   
   fetch(BASE_URL + '/api/agent_add_retailer.php', {
@@ -1194,23 +1537,24 @@ function submitAddRetailer(e) {
     
     if (data.success) {
       closeAllSheets();
-      showToast('রিটেইলার সফলভাবে যুক্ত করা হয়েছে!', 'success');
+      showToast('নতুন রিটেইলার যুক্ত হয়েছে!', 'success');
       
       const r = data.retailer;
       RETAILERS.push(r);
+      updateHeaderBadges();
       if (currentTab === 'sales') {
         loadSalesMarkers();
       } else {
         loadDelivMarkers();
       }
     } else {
-      alert("ত্রুটি: " + data.message);
+      showToast("ত্রুটি: " + data.message, 'danger');
     }
   })
   .catch(err => {
     btn.innerHTML = ogText;
     btn.disabled = false;
-    alert("নেটওয়ার্ক সমস্যা।");
+    showToast("নেটওয়ার্ক সমস্যা।", 'danger');
   });
 }
 
@@ -1225,40 +1569,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (action === 'new_order' && retailerId) {
     const retailer = RETAILERS.find(r => r.id == retailerId);
     if (retailer) {
-      // Small delay to ensure map and sheets are fully initialized visually
       setTimeout(() => {
-        if (parseInt(retailer.has_order) > 0) {
-          openOrderWarning(retailer);
-        } else {
-          openNewOrder(retailer);
-        }
-      }, 500);
+        if (parseInt(retailer.has_order) > 0) openOrderWarning(retailer);
+        else openNewOrder(retailer);
+      }, 400);
     }
   }
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const en2bn = (num) => {
-    const banglaDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
-    return String(num).replace(/[0-9]/g, w => banglaDigits[w]);
-  };
-  const walkDOM = (node) => {
-    if (node.nodeType === 3) {
-      if (node.nodeValue.match(/[0-9]/)) {
-        node.nodeValue = en2bn(node.nodeValue);
-      }
-    } else if (node.nodeType === 1 && !['SCRIPT', 'STYLE', 'INPUT', 'TEXTAREA'].includes(node.nodeName)) {
-      for (let i = 0; i < node.childNodes.length; i++) {
-        walkDOM(node.childNodes[i]);
-      }
-    }
-  };
-  walkDOM(document.body);
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(m => m.addedNodes.forEach(n => walkDOM(n)));
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
 });
 </script>
 </body>
