@@ -316,13 +316,26 @@ if (!empty($slider_products)) {
 
       <a href="<?= BASE_URL ?>/agent/sales.php" class="bg-white p-4 rounded-2xl shadow-md border border-slate-100/50 flex flex-col justify-between hover:shadow-lg transition-shadow group relative overflow-hidden">
         <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 text-base">
-          <i class="fas fa-chart-line"></i>
+          <i class="fas fa-history"></i>
         </div>
         <div class="mt-4">
-          <p class="text-sm font-bold text-slate-900">বিক্রি</p>
-          <p class="text-[11px] text-slate-400 font-medium">রিপোর্ট</p>
+          <p class="text-sm font-bold text-slate-900">বিক্রির ইতিহাস</p>
+          <p class="text-[11px] text-slate-400 font-medium">পূর্বের রেকর্ড</p>
         </div>
         <span class="absolute right-4 bottom-4 text-slate-300 group-hover:text-blue-600 transition-colors text-lg">›</span>
+      </a>
+
+      <a href="<?= BASE_URL ?>/agent/reports.php" class="col-span-2 bg-gradient-to-r from-slate-900 to-primary text-white p-4 rounded-2xl shadow-lg border border-primary/20 flex items-center justify-between hover:shadow-xl transition-all group relative overflow-hidden">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-gold text-lg backdrop-blur-sm border border-white/10">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <div>
+            <p class="text-sm font-black text-white">সেলস রিপোর্ট</p>
+            <p class="text-[11px] text-white/70 font-medium mt-0.5">তারিখ অনুযায়ী বিক্রির পূর্ণাঙ্গ হিসাব</p>
+          </div>
+        </div>
+        <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-base group-hover:translate-x-1 transition-transform">›</span>
       </a>
     </div>
 

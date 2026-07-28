@@ -48,6 +48,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_database'])) {
+    $confirm_text = trim($_POST['confirm_text'] ?? '');
+    if ($confirm_text === 'RESET') {
+        try {
+            $currentUserId = $_SESSION['user_id'] ?? null;
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+            
+            // Get all tables in current database
+            $stmt = $pdo->query("SHOW TABLES");
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($tables as $table) {
+                if ($table === 'users') {
+                    if ($currentUserId) {
+                        $deleteUsersStmt = $pdo->prepare("DELETE FROM users WHERE id != ?");
+                        $deleteUsersStmt->execute([$currentUserId]);
+                    } else {
+                        $deleteUsersStmt = $pdo->prepare("DELETE FROM users WHERE role != 'admin'");
+                        $deleteUsersStmt->execute();
+                    }
+                } else {
+                    $pdo->exec("TRUNCATE TABLE `$table`");
+                }
+            }
+            
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+            $success = "Database reset successfully! All data has been deleted except your admin account.";
+        } catch (Exception $e) {
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+            $error = "Failed to reset database: " . $e->getMessage();
+        }
+    } else {
+        $error = "Database reset cancelled. You must type 'RESET' to confirm.";
+    }
+}
+
 // Fetch agents for the dropdown (removed)
 // $agentsList = ...
 // Load current settings
@@ -141,6 +177,44 @@ $curr = getSetting('currency_symbol', '৳');
         </div>
       </form>
 
+      <!-- Danger Zone: Reset Database -->
+      <div class="card mt-24" style="border: 1px solid var(--danger, #e63946);">
+        <div class="card-header" style="background: rgba(230, 57, 70, 0.05);">
+          <div class="card-title" style="color: var(--danger, #e63946);"><i class="fas fa-exclamation-triangle"></i> Danger Zone — Database Reset</div>
+        </div>
+        <div class="card-body">
+          <p style="color: #64748b; margin-bottom: 16px;">
+            Clearing the database will permanently delete all records (supervisors, agents, retailers, products, orders, deliveries, inventory, etc.) and retain <strong>only your current admin login account</strong>.
+          </p>
+          <button type="button" class="btn" style="background: #e63946; color: #fff;" onclick="openResetModal()">
+            <i class="fas fa-trash-alt"></i> Reset Database (Keep Admin Only)
+          </button>
+        </div>
+      </div>
+
+      <!-- Confirmation Modal -->
+      <div id="resetModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; width:90%; max-width:480px; border-radius:12px; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+          <h3 style="color:#e63946; margin-top:0; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-exclamation-triangle"></i> Confirm Database Reset
+          </h3>
+          <p style="color:#475569; font-size:14px; line-height:1.5;">
+            Are you completely sure? This action is <strong>irreversible</strong>. All tables will be wiped clean, preserving only your current logged-in admin user account.
+          </p>
+          <form method="POST">
+            <input type="hidden" name="reset_database" value="1">
+            <div style="margin-top:16px;">
+              <label class="form-label" style="font-weight:600;">Type <code>RESET</code> to confirm:</label>
+              <input type="text" name="confirm_text" class="form-control" placeholder="RESET" required autocomplete="off" style="text-transform:uppercase;">
+            </div>
+            <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+              <button type="button" class="btn btn-secondary" onclick="closeResetModal()">Cancel</button>
+              <button type="submit" class="btn" style="background:#e63946; color:#fff;">Yes, Delete Everything</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Import Retailers (Hidden) -->
       <form method="POST" enctype="multipart/form-data" class="mt-24" style="margin-top: 24px; display: none;">
         <input type="hidden" name="upload_csv" value="1">
@@ -184,6 +258,14 @@ map.on('click', function(e) {
 map.on('zoomend', function() {
   document.getElementById('mapZoom').value = map.getZoom();
 });
+
+function openResetModal() {
+  document.getElementById('resetModal').style.display = 'flex';
+}
+
+function closeResetModal() {
+  document.getElementById('resetModal').style.display = 'none';
+}
 </script>
 <style>@media(max-width:768px){.settings-grid{grid-template-columns:1fr!important;}}</style>
 </body>
