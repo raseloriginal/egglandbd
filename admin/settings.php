@@ -11,14 +11,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
             $file = $_FILES['csv_file']['tmp_name'];
             if (($handle = fopen($file, "r")) !== FALSE) {
-                $header = fgetcsv($handle, 1000, ","); // Skip header
+                // Read header row
+                $header = fgetcsv($handle, 1000, ",");
+                $colIndexes = ['name' => 0, 'phone' => 1, 'lat' => 2, 'lng' => 3];
+                
+                if ($header !== FALSE) {
+                    foreach ($header as $idx => $colName) {
+                        $colClean = strtolower(trim($colName));
+                        if ($colClean === 'name') $colIndexes['name'] = $idx;
+                        elseif ($colClean === 'phone') $colIndexes['phone'] = $idx;
+                        elseif ($colClean === 'lat' || $colClean === 'latitude') $colIndexes['lat'] = $idx;
+                        elseif ($colClean === 'lng' || $colClean === 'longitude') $colIndexes['lng'] = $idx;
+                    }
+                }
+
                 $stmt = $pdo->prepare("INSERT INTO retailers (agent_id, name, phone, lat, lng) VALUES (NULL, ?, ?, ?, ?)");
                 $count = 0;
                 while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                    $name = trim($data[0] ?? '');
-                    $phone = trim($data[1] ?? '');
-                    $lat = trim($data[2] ?? '');
-                    $lng = trim($data[3] ?? '');
+                    $name = trim($data[$colIndexes['name']] ?? '');
+                    $phone = trim($data[$colIndexes['phone']] ?? '');
+                    $lat = trim($data[$colIndexes['lat']] ?? '');
+                    $lng = trim($data[$colIndexes['lng']] ?? '');
                     
                     if (!empty($name)) {
                         $stmt->execute([$name, $phone, $lat ?: null, $lng ?: null]);
@@ -26,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 fclose($handle);
-                $success = "$count retailers imported successfully.";
+                $success = "$count retailers imported successfully from CSV file.";
             } else {
-                $error = "Failed to open the uploaded file.";
+                $error = "Failed to open the uploaded CSV file.";
             }
         } else {
             $error = "Please upload a valid CSV file.";
@@ -215,21 +228,23 @@ $curr = getSetting('currency_symbol', '৳');
         </div>
       </div>
 
-      <!-- Import Retailers (Hidden) -->
-      <form method="POST" enctype="multipart/form-data" class="mt-24" style="margin-top: 24px; display: none;">
+      <!-- Bulk Retailer Import (CSV) -->
+      <form method="POST" enctype="multipart/form-data" class="mt-24">
         <input type="hidden" name="upload_csv" value="1">
         <div class="card">
-          <div class="card-header"><div class="card-title"><i class="fas fa-file-csv"></i> Import Retailers Data</div></div>
+          <div class="card-header"><div class="card-title"><i class="fas fa-file-csv"></i> Bulk Retailer Add (CSV Import)</div></div>
           <div class="card-body">
-            <div class="alert alert-info">Upload a CSV file containing retailers data. Expected columns: <strong>Name, Phone, Lat, Lng</strong>.</div>
-            <div style="margin-top:12px;">
-              <div class="form-group">
-                <label class="form-label">CSV File</label>
-                <input type="file" name="csv_file" class="form-control" accept=".csv" required style="padding-top: 6px;">
-              </div>
+            <div class="alert alert-info" style="line-height:1.6;">
+              <i class="fas fa-info-circle"></i> Upload a CSV file with columns matching your provided structure: <strong>Name, Phone, Lat, Lng</strong>.
             </div>
             <div style="margin-top:16px;">
-              <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload & Import</button>
+              <div class="form-group">
+                <label class="form-label" style="font-weight:600;">Choose CSV File</label>
+                <input type="file" name="csv_file" class="form-control" accept=".csv" required style="padding: 8px;">
+              </div>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+              <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload & Import Retailers</button>
             </div>
           </div>
         </div>
